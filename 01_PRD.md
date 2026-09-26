@@ -1,4 +1,4 @@
-# PRD — Ari b#rid Music Player
+# PRD — LiPhify Music Player
 Local Playback + YouTube Music (via NewPipeExtractor), UI ala Apple Music
 
 ## 1. Ringkasan Produk
@@ -78,6 +78,7 @@ Pengguna tunggal: pembuat app sendiri (P). Bukan produk multi-user, tidak ada on
 - **Verifikasi**: Manual test minimize 10 menit sambil playback jalan; test kontrol lock screen & headset; test kill app dari recent apps (service stop graceful, notification tidak residual).
 
 ### PRD-007 — Bottom Tab Navigation (Apple Music layout)
+> SUPERSEDE oleh design.md §4.1 (keputusan user): 3 tab (Home, New, Library) + tombol Search bulat 44dp terpisah — bukan 4 tab. Label final: Home (=Listen Now), New (=Browse), Library.
 - **Apa**: 4 tab utama: Listen Now, Browse, Library, Search — struktur & urutan niru Apple Music.
 - **Kenapa**: Kerangka navigasi yang bikin app "berasa" Apple Music, bukan cuma warna/font.
 - **Perilaku**: Tab bar persisten di atas mini-player; Listen Now = rekomendasi/recently played gabungan lokal+YT; Browse = jelajah genre/mood YT Music; Library = koleksi lokal + playlist; Search = unified search.

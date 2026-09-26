@@ -6,6 +6,7 @@ import com.zaaam.liphify.data.youtube.YtTrack
 import com.zaaam.liphify.domain.model.PlaybackSource
 import com.zaaam.liphify.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.FlowPreview
@@ -30,12 +31,22 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repo: MusicRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state
     private val queryFlow = MutableStateFlow("")
     /** Job YT terkontrol: cegah request menumpuk saat ketik cepat. */
     private var ytJob: Job? = null
+
+    init {
+        // Preset genre dari nav-arg: survive relaunch + process death.
+        viewModelScope.launch {
+            savedStateHandle.getStateFlow("preset", "").collect { p ->
+                if (p.isNotBlank() && _state.value.query.isBlank()) onQuery(p)
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {

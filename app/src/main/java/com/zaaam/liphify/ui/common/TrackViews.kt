@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -97,7 +97,7 @@ fun TrackRow(
                 modifier = Modifier.clickable(onClick = onMenu).padding(8.dp),
             )
         }
-        Divider(color = DividerColor)
+        HorizontalDivider(color = DividerColor)
     }
 }
 
@@ -165,6 +165,7 @@ fun LargeTitle(text: String, modifier: Modifier = Modifier.padding(horizontal = 
         text,
         fontSize = 34.sp,
         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+        fontFamily = com.zaaam.liphify.ui.theme.AppFont,
         modifier = modifier,
     )
 }

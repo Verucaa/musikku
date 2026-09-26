@@ -5,6 +5,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.stream.StreamInfo
+import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -41,30 +42,35 @@ class YouTubeRepository @Inject constructor() {
             coroutineContext.ensureActive()
             val items = extractor.initialPage.items.mapNotNull { item ->
                 try {
+                    // Hanya stream video (StreamInfoItem): playlist/channel/shelf
+                    // tidak bisa di-resolve jadi audio dan hanya jadi sampah key.
+                    if (item !is StreamInfoItem) return@mapNotNull null
                     val url = item.url ?: return@mapNotNull null
-                    // ID stabil: video-ID 11 char bila valid, kalau bukan (playlist/
-                    // channel/shelf) pakai URL penuh — JANGAN dipotong, pemotongan
-                    // bikin key kolaps/duplikat di LazyColumn (= force close).
                     val videoId = Regex("v=([A-Za-z0-9_-]{11})").find(url)?.groupValues?.get(1)
-                        ?: url
-                    if (videoId.isBlank()) return@mapNotNull null
+                        ?: return@mapNotNull null
                     YtTrack(
                         videoId = videoId,
                         title = item.name?.ifBlank { "Unknown" } ?: "Unknown",
-                        artist = "",
+                        artist = item.uploaderName?.removeSuffix(" - Topic")?.ifBlank { "YouTube" } ?: "YouTube",
                         thumbnailUrl = try {
                             item.thumbnails.firstOrNull()?.url ?: ""
                         } catch (_: Throwable) {
                             ""
                         },
-                        durationSec = -1,
+                        durationSec = try {
+                            item.duration
+                        } catch (_: Throwable) {
+                            -1L
+                        },
                     )
-                } catch (_: Throwable) {
+                } catch (e: Throwable) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     null
                 }
             }.distinctBy { it.videoId }
             YtResult.Ok(items)
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             YtResult.Fail(FAIL_MSG)
         }
     }
@@ -79,13 +85,15 @@ class YouTubeRepository @Inject constructor() {
             val audio = info.audioStreams.maxByOrNull {
                 try {
                     it.bitrate
-                } catch (_: Throwable) {
+                } catch (e: Throwable) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     0
                 }
             } ?: return@withContext YtResult.Fail("Stream audio tidak tersedia (mungkin age-restricted / private / region-block)")
             val streamUrl = try {
                 audio.url
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 ""
             }
             if (streamUrl.isNullOrBlank()) {
@@ -93,7 +101,8 @@ class YouTubeRepository @Inject constructor() {
             } else {
                 YtResult.Ok(streamUrl)
             }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             YtResult.Fail(FAIL_MSG)
         }
     }

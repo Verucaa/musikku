@@ -46,15 +46,22 @@ import com.zaaam.liphify.ui.theme.TextSecondary
 fun HomeScreen(
     player: PlaybackViewModel,
     libVm: LibraryViewModel,
+    plVm: PlaylistViewModel,
     vm: HomeViewModel = hiltViewModel(),
-    plVm: PlaylistViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
     val lib by libVm.state.collectAsState()
     var menu by remember { mutableStateOf<Track?>(null) }
-    val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+    val audioPerm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+    val allPerms = remember {
+        if (Build.VERSION.SDK_INT >= 33) {
+            arrayOf(audioPerm, Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            arrayOf(audioPerm)
+        }
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         libVm.scanIfEmpty(); vm.refresh()
     }
     LaunchedEffect(Unit) { vm.refresh() }
@@ -67,7 +74,7 @@ fun HomeScreen(
             item {
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Text("Perlu izin audio untuk memindai musik di perangkat.", color = TextSecondary)
-                    Button(onClick = { launcher.launch(perm) }, modifier = Modifier.padding(vertical = 8.dp)) {
+                    Button(onClick = { launcher.launch(allPerms) }, modifier = Modifier.padding(vertical = 8.dp)) {
                         Text("Beri izin & pindai")
                     }
                 }
@@ -103,7 +110,7 @@ fun HomeScreen(
         if (s.newMusic.isEmpty()) {
             item {
                 Text(
-                    "Belum ada musik. Beri izin lalu pindai dari Library.",
+                    "Belum ada musik. Taruh lagu di folder Music/LiPhify lalu pindai dari Library.",
                     Modifier.padding(16.dp),
                     color = TextSecondary,
                 )
@@ -119,14 +126,6 @@ fun HomeScreen(
                         }
                     }
                 }
-            }
-        }
-        item {
-            Text("New Music", Modifier.padding(start = 16.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-        items(s.newMusic, key = { it.key }) { t ->
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                TrackRow(track = t, onPlay = { player.playTrack(t, s.newMusic) }, onMenu = { menu = t })
             }
         }
     }

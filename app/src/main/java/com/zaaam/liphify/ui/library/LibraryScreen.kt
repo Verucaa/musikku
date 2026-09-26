@@ -21,7 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,14 +66,53 @@ private sealed interface LibView {
 fun LibraryScreen(
     player: PlaybackViewModel,
     vm: LibraryViewModel,
-    plVm: PlaylistViewModel = hiltViewModel(),
+    plVm: PlaylistViewModel,
 ) {
     val state by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
-    var view by remember { mutableStateOf<LibView>(LibView.Main) }
+    // View tahan rotasi (rememberSaveable String, bukan objek).
+    var viewKey by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var view: LibView by remember(viewKey) {
+        mutableStateOf(
+            when {
+                viewKey == null -> LibView.Main
+                viewKey == "songs" -> LibView.Songs
+                viewKey == "artists" -> LibView.Artists
+                viewKey == "albums" -> LibView.Albums
+                viewKey == "playlists" -> LibView.Playlists
+                viewKey!!.startsWith("artist:") -> LibView.Artist(viewKey!!.removePrefix("artist:"))
+                viewKey!!.startsWith("album:") -> LibView.Album(viewKey!!.removePrefix("album:"))
+                viewKey!!.startsWith("playlist:") -> {
+                    val rest = viewKey!!.removePrefix("playlist:")
+                    LibView.Playlist(rest.substringBefore("|").toLongOrNull() ?: -1, rest.substringAfter("|", ""))
+                }
+                else -> LibView.Main
+            },
+        )
+    }
+    fun go(v: LibView) {
+        viewKey = when (v) {
+            LibView.Main -> null
+            LibView.Songs -> "songs"
+            LibView.Artists -> "artists"
+            LibView.Albums -> "albums"
+            LibView.Playlists -> "playlists"
+            is LibView.Artist -> "artist:${v.name}"
+            is LibView.Album -> "album:${v.name}"
+            is LibView.Playlist -> "playlist:${v.id}|${v.name}"
+        }
+        view = v
+    }
     var menu by remember { mutableStateOf<Track?>(null) }
-    val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.scanIfEmpty() }
+    val audioPerm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+    val allPerms = remember {
+        if (Build.VERSION.SDK_INT >= 33) {
+            arrayOf(audioPerm, Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            arrayOf(audioPerm)
+        }
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.scanIfEmpty() }
     LaunchedEffect(Unit) { vm.scanIfEmpty() }
 
     if (state.needsPermission) {
@@ -85,7 +124,7 @@ fun LibraryScreen(
                 modifier = Modifier.padding(top = 6.dp),
             )
             Spacer(Modifier.height(12.dp))
-            Button(onClick = { launcher.launch(perm) }) { Text("Pindai folder LiPhify") }
+            Button(onClick = { launcher.launch(allPerms) }) { Text("Pindai folder LiPhify") }
         }
         return
     }
@@ -95,7 +134,7 @@ fun LibraryScreen(
 
     Column(Modifier.fillMaxSize()) {
         if (view != LibView.Main) {
-            TextButton(onClick = { view = LibView.Main }) { Text("‹ Library") }
+            TextButton(onClick = { go(LibView.Main) }) { Text("‹ Library") }
         }
         when (val v = view) {
             LibView.Main -> {
@@ -103,10 +142,10 @@ fun LibraryScreen(
                     item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
                     item {
                         Column {
-                            CatRow("🎧", "Playlists", pls.size) { view = LibView.Playlists }
-                            CatRow("🎤", "Artists", state.artists.size) { view = LibView.Artists }
-                            CatRow("💿", "Albums", state.albums.size) { view = LibView.Albums }
-                            CatRow("🎵", "Songs", state.songCount) { view = LibView.Songs }
+                            CatRow("🎧", "Playlists", pls.size) { go(LibView.Playlists) }
+                            CatRow("🎤", "Artists", state.artists.size) { go(LibView.Artists) }
+                            CatRow("💿", "Albums", state.albums.size) { go(LibView.Albums) }
+                            CatRow("🎵", "Songs", state.songCount) { go(LibView.Songs) }
                         }
                     }
                     item {
@@ -133,6 +172,14 @@ fun LibraryScreen(
                             }
                             TextButton(onClick = { vm.scan() }) { Text(if (state.scanning) "Memindai…" else "Refresh") }
                         }
+                        if (state.scanError != null) {
+                            Text(
+                                state.scanError,
+                                fontSize = 12.sp,
+                                color = Color(0xFFFF9D9D),
+                                modifier = Modifier.padding(bottom = 4.dp),
+                            )
+                        }
                     }
                     items(songList, key = { it.key }) { t ->
                         TrackRow(track = t, onPlay = { playAll(t) }, onMenu = { menu = t })
@@ -140,18 +187,19 @@ fun LibraryScreen(
                 }
             }
             LibView.Songs -> SongList(songList, onPlay = { playAll(it) }, onMenu = { menu = it })
-            LibView.Artists -> NameList("Artists", state.artists) { view = LibView.Artist(it) }
+            LibView.Artists -> NameList("Artists", state.artists) { go(LibView.Artist(it)) }
             is LibView.Artist -> {
                 val list = songList.filter { it.artist == v.name }
                 SongList(list, title = v.name, onPlay = { player.playTrack(it, list) }, onMenu = { menu = it })
             }
-            LibView.Albums -> NameList("Albums", state.albums) { view = LibView.Album(it) }
+            LibView.Albums -> NameList("Albums", state.albums) { go(LibView.Album(it)) }
             is LibView.Album -> {
                 val list = songList.filter { it.album == v.name }
                 SongList(list, title = v.name, onPlay = { player.playTrack(it, list) }, onMenu = { menu = it })
             }
             LibView.Playlists -> PlaylistList(
-                onOpen = { id, name -> view = LibView.Playlist(id, name) },
+                plVm = plVm,
+                onOpen = { id, name -> go(LibView.Playlist(id, name)) },
                 onCreate = { plVm.create(it) },
             )
             is LibView.Playlist -> PlaylistDetail(
@@ -159,7 +207,7 @@ fun LibraryScreen(
                 name = v.name,
                 plVm = plVm,
                 player = player,
-                onDelete = { plVm.deletePlaylist(v.id); view = LibView.Playlists },
+                onDelete = { plVm.deletePlaylist(v.id); go(LibView.Playlists) },
             )
         }
     }
@@ -190,7 +238,7 @@ private fun CatRow(icon: String, label: String, count: Int, onClick: () -> Unit)
             Text(label, Modifier.padding(start = 12.dp).weight(1f), fontSize = 17.sp)
             Text("›", color = com.zaaam.liphify.ui.theme.TextHint, fontSize = 20.sp)
         }
-        Divider(color = com.zaaam.liphify.ui.theme.Divider)
+        HorizontalDivider(color = com.zaaam.liphify.ui.theme.Divider)
     }
 }
 
@@ -218,8 +266,7 @@ private fun NameList(title: String, names: List<String>, onOpen: (String) -> Uni
 }
 
 @Composable
-private fun PlaylistList(onOpen: (Long, String) -> Unit, onCreate: (String) -> Unit) {
-    val plVm: PlaylistViewModel = hiltViewModel()
+private fun PlaylistList(plVm: PlaylistViewModel, onOpen: (Long, String) -> Unit, onCreate: (String) -> Unit) {
     val pls by plVm.playlists.collectAsState()
     var name by remember { mutableStateOf("") }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -253,7 +300,7 @@ private fun PlaylistDetail(
     var tracks by remember(id) { mutableStateOf<List<PlaylistTrackEntity>>(emptyList()) }
     var menu by remember { mutableStateOf<Track?>(null) }
     val pls by plVm.playlists.collectAsState()
-    LaunchedEffect(id) {
+    LaunchedEffect(id, pls) {
         tracks = withContext(Dispatchers.IO) { plVm.tracksOf(id) }
     }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {

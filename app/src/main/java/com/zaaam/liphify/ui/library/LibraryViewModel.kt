@@ -32,6 +32,7 @@ data class LibraryUiState(
     val needsPermission: Boolean = false,
     val scanning: Boolean = false,
     val lastScanCount: Int = -1,
+    val scanError: String? = null,
 )
 
 @HiltViewModel
@@ -72,12 +73,13 @@ class LibraryViewModel @Inject constructor(
 
     fun scan() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(scanning = true, needsPermission = false)
+            _state.value = _state.value.copy(scanning = true, needsPermission = false, scanError = null)
             try {
                 val n = withContext(Dispatchers.IO) { scanner.scan() }
                 _state.value = _state.value.copy(lastScanCount = n)
             } catch (e: Exception) {
                 Log.w("LiPhifyLib", "scan gagal", e)
+                _state.value = _state.value.copy(scanError = "Scan gagal: ${e.message ?: "error tak dikenal"}")
             }
             try {
                 loadFromDb()
@@ -121,6 +123,7 @@ class LibraryViewModel @Inject constructor(
             needsPermission = false,
             scanning = false,
             lastScanCount = _state.value.lastScanCount,
+            scanError = _state.value.scanError,
         )
     }
 }

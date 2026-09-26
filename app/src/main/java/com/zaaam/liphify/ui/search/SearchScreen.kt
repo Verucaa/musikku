@@ -58,8 +58,8 @@ private val GENRES = listOf(
 fun SearchScreen(
     preset: String = "",
     player: PlaybackViewModel,
+    plVm: PlaylistViewModel,
     vm: SearchViewModel = hiltViewModel(),
-    plVm: PlaylistViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()

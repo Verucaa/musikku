@@ -1,9 +1,11 @@
 package com.zaaam.liphify.ui.theme
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -50,5 +52,11 @@ private val Scheme = darkColorScheme(
 
 @Composable
 fun LiPhifyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = Scheme, typography = AppTypography, content = content)
+    MaterialTheme(colorScheme = Scheme, typography = AppTypography) {
+        CompositionLocalProvider(
+            LocalTextStyle provides TextStyle(fontFamily = AppFont, color = TextPrimary),
+        ) {
+            content()
+        }
+    }
 }

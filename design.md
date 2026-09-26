@@ -1,4 +1,4 @@
-# DESIGN.md — Aria UI/UX Implementation Spec
+# DESIGN.md — LiPhify UI/UX Implementation Spec
 Untuk AI coding agent (bukan manusia). Dibaca setelah 01_PRD.md.
 
 ## 0. Aturan wajib — BACA DULU SEBELUM NGODING

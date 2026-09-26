@@ -22,7 +22,8 @@ class MusicRepository @Inject constructor(
             // Escape wildcard LIKE supaya ketikan %/_ tidak meledak jadi full-table.
             val safe = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             db.trackDao().search(safe).map { it.toTrack() }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             emptyList()
         }
     }
@@ -32,7 +33,8 @@ class MusicRepository @Inject constructor(
     suspend fun localSongs(): List<Track> =
         try {
             db.trackDao().allSongs().map { it.toTrack() }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             emptyList()
         }
 
@@ -41,7 +43,7 @@ class MusicRepository @Inject constructor(
 
 /** Mapping tunggal entity -> domain. Artwork = URI album art nyata (null = fallback UI). */
 fun TrackEntity.toTrack(): Track = Track(
-    key = "local:$mediaId",
+    key = "local:$volume:$mediaId",
     title = title,
     artist = artist,
     album = album,

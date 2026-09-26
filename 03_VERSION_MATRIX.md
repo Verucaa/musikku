@@ -1,4 +1,4 @@
-# Version Matrix — Aria (working title)
+# Version Matrix — LiPhify
 
 ## 1. Requirement -> Target Version
 
@@ -26,16 +26,16 @@
 | Dependency | Versi Rekomendasi | Catatan |
 |---|---|---|
 | NewPipeExtractor | v0.26.5 (rilis terbaru per pengecekan) | JitPack. Pin versi eksak, JANGAN pakai plus/wildcard — extractor sering breaking change antar minor version karena mengikuti perubahan struktur YouTube |
-| AndroidX Media3 (ExoPlayer, Session) | 1.9.0 (stable per Des 2025, cek update terbaru) | Satu BOM untuk semua modul media3-* |
-| Room | Stable terbaru saat implementasi (cek developer.android.com/jetpack/androidx/releases/room) | AndroidX baru merilis penerus dengan penamaan baru — cek dulu mana yang benar-benar stable sebelum commit |
-| Hilt | sekitar 1.4.x (per pertengahan 2026, cek versi stable terbaru) | Opsional — boleh diganti Koin kalau kamu lebih familiar |
-| Jetpack Compose (BOM) | BOM terbaru saat implementasi (Compose UI/Foundation/Material sekitar 1.11.x per pertengahan 2026) | Pakai Compose BOM, jangan pin versi per-modul manual |
-| Kotlin | Versi stable terbaru (cek kotlinlang.org/docs/releases.html) | - |
-| Android Gradle Plugin | Minimal 7.4.0 (syarat NewPipeExtractor untuk desugaring), disarankan versi 8.x stable terbaru | - |
+| AndroidX Media3 (ExoPlayer, Session) | 1.9.0 eksplisit per modul (TANPA BOM — artefak media3-bom:1.9.0 tidak ada di repo Google/Maven) | LiPhify-v1.0.0 |
+| Room | 2.6.1 + KSP | - |
+| Hilt | 2.51.1 | BUKAN 1.4.x (koreksi) |
+| Jetpack Compose (BOM) | 2024.10.01 | - |
+| Kotlin | 2.0.20 + Compose Compiler plugin + KSP 2.0.20-1.0.25 | Wajib plugin (bukan kotlinCompilerExtensionVersion) |
+| Android Gradle Plugin | 8.5.2 | Gradle wrapper dipin 8.7 di workflow (tanpa wrapper jar) |
 
 ## 3. SDK Target
-- minSdk: 33 (Android 13) — direkomendasikan karena distribusi sideload-only ke device sendiri (OPPO A60), jadi tidak perlu core library desugaring yang disyaratkan NewPipeExtractor untuk minSdk di bawah 33. Kalau nanti mau support device lebih lama, turunkan ke 26 + aktifkan desugaring (desugar_jdk_libs_nio).
-- targetSdk / compileSdk: pakai versi terbaru yang tersedia di SDK Manager kamu saat build (minimal API 34).
+- minSdk: 33 (Android 13)
+- targetSdk / compileSdk: 35 — NAIK dari 34 karena syarat mutlak media3 1.9.0 (checkReleaseAarMetadata gagal di 34).
 
 ## 4. ProGuard/R8 Rules Wajib (dari NewPipeExtractor)
 

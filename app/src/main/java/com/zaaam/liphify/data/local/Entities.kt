@@ -9,7 +9,9 @@ import androidx.room.Query
 
 @Entity(tableName = "tracks")
 data class TrackEntity(
-    @PrimaryKey val mediaId: Long,
+    @PrimaryKey(autoGenerate = false) val rowKey: String,
+    val volume: String = "",
+    val mediaId: Long = 0L,
     val title: String,
     val artist: String,
     val album: String,
@@ -99,14 +101,17 @@ interface TrackDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<TrackEntity>)
 
-    @Query("DELETE FROM tracks WHERE mediaId NOT IN (:keep)")
-    suspend fun pruneMissing(keep: List<Long>)
+    @Query("SELECT contentUri FROM tracks")
+    suspend fun existingUris(): List<String>
+
+    @Query("DELETE FROM tracks WHERE contentUri IN (:uris)")
+    suspend fun deleteByUris(uris: List<String>)
 
     @Query("DELETE FROM tracks")
     suspend fun clearAll()
 
-    /** Purge satu-kali: hapus baris di luar folder aplikasi. */
-    @Query("DELETE FROM tracks WHERE relativePath NOT LIKE 'Music/LiPhify/%'")
+    /** Hapus baris di luar folder aplikasi (dipanggil eksplisit pasca-scan sukses). */
+    @Query("DELETE FROM tracks WHERE relativePath NOT LIKE 'Music/LiPhify/%' COLLATE NOCASE")
     suspend fun purgeNonAppFolder(): Int
 }
 
@@ -129,6 +134,9 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :id AND position = :pos")
     suspend fun removeTrack(id: Long, pos: Int)
+
+    @Query("DELETE FROM playlist_tracks WHERE playlistId = :id")
+    suspend fun deleteAllTracks(id: Long)
 
     @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlistId = :id")
     suspend fun trackCount(id: Long): Int

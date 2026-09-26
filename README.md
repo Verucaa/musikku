@@ -8,10 +8,12 @@ Player musik hybrid: file audio lokal (MediaStore) + streaming YouTube Music
 Semua build berat HANYA via GitHub Actions (jangan di device):
 
 1. Push ke `main` → workflow `.github/workflows/build-release.yml`
-   otomatis `assembleRelease` → upload artifact `LiPhify-release`.
+   otomatis `assembleRelease` → upload artifact `LiPhify-release`
+   (hanya APK signed; unsigned dihapus setelah sign + verify).
 2. Signing: isi Secrets `KEYSTORE_B64`, `KEYSTORE_PASSWORD`,
    `KEY_ALIAS`, `KEY_PASSWORD`. Tanpa secrets → APK unsigned.
-3. Install manual via LADB / transfer file ke OPPO A60.
+3. Gradle dipin 8.7 di workflow (tanpa wrapper jar di repo).
+4. Install manual via LADB / transfer file ke OPPO A60.
 
 Lokal cukup untuk edit kode. Jangan jalankan Gradle di Termux/proot.
 
@@ -31,6 +33,5 @@ Lokal cukup untuk edit kode. Jangan jalankan Gradle di Termux/proot.
   `androidx.media3:media3-bom:1.9.0` tidak ketemu di repo Google/Maven.
 
 ## v1.1 backlog (P1, bukan silently drop)
-
 - PRD-101 Lyrics, PRD-102 Dynamic theming penuh, PRD-103 Sleep timer,
   PRD-104 Equalizer. Ikon lirik di Now Playing sengaja disabled.

@@ -85,7 +85,10 @@ class PlaylistViewModel @Inject constructor(
     fun deletePlaylist(id: Long) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                db.playlistDao().delete(id)
+                androidx.room.withTransaction(db) {
+                    db.playlistDao().deleteAllTracks(id)
+                    db.playlistDao().delete(id)
+                }
                 refresh()
             } catch (e: Exception) {
                 android.util.Log.w("LiPhifyPl", "delete gagal", e)

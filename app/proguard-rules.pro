@@ -8,3 +8,5 @@
 -dontwarn javax.script.**
 -dontwarn jdk.dynalink.**
 -dontwarn org.mozilla.classfile.**
+# Guava (transitif NewPipe) — R8 hanya butuh diam, consumer-rules bawaan yang jaga keep
+-dontwarn com.google.common.**

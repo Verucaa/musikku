@@ -48,6 +48,7 @@ import com.zaaam.liphify.ui.browse.BrowseScreen
 import com.zaaam.liphify.ui.home.HomeScreen
 import com.zaaam.liphify.ui.library.LibraryScreen
 import com.zaaam.liphify.ui.library.LibraryViewModel
+import com.zaaam.liphify.ui.playlist.PlaylistViewModel
 import com.zaaam.liphify.ui.nav.Tab
 import com.zaaam.liphify.ui.player.MiniPlayer
 import com.zaaam.liphify.ui.player.NowPlayingScreen
@@ -66,19 +67,24 @@ import dev.chrisbanes.haze.hazeChild
 class MainActivity : ComponentActivity() {
     private val player: PlaybackViewModel by viewModels()
     private val libraryVm: LibraryViewModel by viewModels()
+    private val playlistVm: PlaylistViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LiPhifyTheme {
-                LiPhifyScaffold(player, libraryVm)
+                LiPhifyScaffold(player, libraryVm, playlistVm)
             }
         }
     }
 }
 
 @Composable
-fun LiPhifyScaffold(player: PlaybackViewModel, libraryVm: LibraryViewModel) {
+fun LiPhifyScaffold(
+    player: PlaybackViewModel,
+    libraryVm: LibraryViewModel,
+    playlistVm: PlaylistViewModel,
+) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
@@ -87,7 +93,7 @@ fun LiPhifyScaffold(player: PlaybackViewModel, libraryVm: LibraryViewModel) {
     val hazeState = remember { HazeState() }
 
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = com.zaaam.liphify.ui.theme.BgMain,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp)) {
@@ -158,7 +164,7 @@ fun LiPhifyScaffold(player: PlaybackViewModel, libraryVm: LibraryViewModel) {
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad).haze(state = hazeState)) {
             NavHost(nav, startDestination = Tab.Library.route) {
-                composable(Tab.Home.route) { HomeScreen(player = player, libVm = libraryVm) }
+                composable(Tab.Home.route) { HomeScreen(player = player, libVm = libraryVm, plVm = playlistVm) }
                 composable(Tab.New.route) {
                     BrowseScreen(onGenre = {
                         nav.navigate("search?preset=" + android.net.Uri.encode(it)) {
@@ -166,16 +172,19 @@ fun LiPhifyScaffold(player: PlaybackViewModel, libraryVm: LibraryViewModel) {
                         }
                     })
                 }
-                composable(Tab.Library.route) { LibraryScreen(player = player, vm = libraryVm) }
+                composable(Tab.Library.route) { LibraryScreen(player = player, vm = libraryVm, plVm = playlistVm) }
                 composable(
                     "search?preset={preset}",
                     arguments = listOf(navArgument("preset") { type = NavType.StringType; defaultValue = "" }),
                 ) { entry ->
-                    SearchScreen(preset = entry.arguments?.getString("preset") ?: "", player = player)
+                    SearchScreen(preset = entry.arguments?.getString("preset") ?: "", player = player, plVm = playlistVm)
                 }
             }
+            androidx.activity.compose.BackHandler(enabled = pState.isExpanded) {
+                player.setExpanded(false)
+            }
             if (pState.isExpanded) {
-                NowPlayingScreen(state = pState, player = player, snack = snack)
+                NowPlayingScreen(state = pState, player = player, snack = snack, plVm = playlistVm)
             }
         }
     }
@@ -195,6 +204,7 @@ private fun TabItem(
             nav.navigate(tab.route) {
                 launchSingleTop = true
                 restoreState = true
+                popUpTo(nav.graph.startDestinationId) { saveState = true }
             }
         },
         modifier = modifier,

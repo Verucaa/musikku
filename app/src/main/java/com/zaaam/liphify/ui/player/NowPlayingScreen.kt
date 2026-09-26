@@ -73,7 +73,7 @@ fun NowPlayingScreen(
     state: PlayerUiState,
     player: PlaybackViewModel,
     snack: SnackbarHostState,
-    plVm: com.zaaam.liphify.ui.playlist.PlaylistViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    plVm: com.zaaam.liphify.ui.playlist.PlaylistViewModel,
 ) {
     val cur = state.current
     val ctx = LocalContext.current
@@ -179,13 +179,18 @@ fun NowPlayingScreen(
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.VolumeDown, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                    var volDrag: Float? by remember { mutableStateOf(null) }
                     Slider(
-                        value = vol,
-                        onValueChange = {
-                            vol = it
-                            am.setStreamVolume(AudioManager.STREAM_MUSIC, it.toInt(), 0)
-                        },
+                        value = volDrag ?: vol,
+                        onValueChange = { volDrag = it.coerceIn(0f, max.toFloat()) },
                         valueRange = 0f..max.toFloat(),
+                        onValueChangeFinished = {
+                            volDrag?.let {
+                                vol = it
+                                am.setStreamVolume(AudioManager.STREAM_MUSIC, it.toInt(), 0)
+                            }
+                            volDrag = null
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     Icon(Icons.Filled.VolumeUp, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- PRD-001: scan MediaStore -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <!-- API <33: nama izin lama (wajib dideklarasikan agar request tidak auto-denied) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- PRD-006: notifikasi media wajib izin runtime di API 33+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Foreground service untuk playback (PRD-006) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -15,9 +16,9 @@
     <application
         android:name=".LiPhifyApp"
         android:label="LiPhify"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.LiPhify"
-        android:allowBackup="true"
-        tools:targetApi="34">
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -27,6 +28,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- exported=true WAJIB untuk MediaSessionService (framework/system UI bind). -->
         <service
             android:name=".playback.LiPhifySessionService"
             android:foregroundServiceType="mediaPlayback"

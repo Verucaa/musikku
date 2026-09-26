@@ -20,11 +20,9 @@ import com.zaaam.liphify.domain.model.Track
 import com.zaaam.liphify.playback.LiPhifySessionService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +55,6 @@ class PlaybackViewModel @Inject constructor(
     val state: StateFlow<PlayerUiState> = _state
 
     private var controller: MediaController? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var ticker: Job? = null
     /** Aksi yang datang sebelum controller tersambung — dijalankan saat connect, tidak hilang diam-diam. */
     private val pending = mutableListOf<(MediaController) -> Unit>()
@@ -72,13 +69,14 @@ class PlaybackViewModel @Inject constructor(
                 Log.w("LiPhifyPlayer", "controller call gagal", e)
             }
         } else {
+            if (pending.size >= 20) pending.removeAt(0)
             pending.add(block)
         }
     }
 
     init {
         connect()
-        scope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Restore queue saja (metadata), current dibiarkan null supaya
                 // mini-player tidak nampil lagu basi yang belum di-load ke controller.
@@ -104,10 +102,14 @@ class PlaybackViewModel @Inject constructor(
                     Log.w("LiPhifyPlayer", "controller connect gagal", e)
                     connectAttempts++
                     if (connectAttempts <= 3) {
-                        scope.launch {
+                        viewModelScope.launch {
                             delay(3000)
                             connect()
                         }
+                    } else {
+                        _state.value = _state.value.copy(
+                            error = "Tidak bisa tersambung ke layanan putar, restart app",
+                        )
                     }
                     return@addListener
                 }
@@ -120,6 +122,29 @@ class PlaybackViewModel @Inject constructor(
                     shuffleEnabled = c.shuffleModeEnabled,
                     repeatMode = c.repeatMode,
                 )
+                if (c.isPlaying) startTicker()
+                // Sinkronkan track lokal restore ke controller (tanpa autoplay).
+                // Track YouTube diskip: URL expired, di-resolve ulang saat di-tap.
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val locals = _state.value.queue.filter { it.source is PlaybackSource.Local }
+                        if (locals.isNotEmpty() && c.mediaItemCount == 0) {
+                            val items = locals.mapNotNull { t ->
+                                val uri = (t.source as PlaybackSource.Local).uri.toString()
+                                if (uri.isBlank()) return@mapNotNull null
+                                LiPhifySessionService.buildMediaItem(t.key, t.title, t.artist, t.artwork, uri)
+                            }
+                            if (items.isNotEmpty()) {
+                                withController { cc ->
+                                    cc.setMediaItems(items)
+                                    cc.prepare()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w("LiPhifyPlayer", "sync restore gagal", e)
+                    }
+                }
                 pending.forEach { block ->
                     try {
                         block(c)
@@ -141,8 +166,13 @@ class PlaybackViewModel @Inject constructor(
         }
 
         override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-            val track = _state.value.queue.find { it.key == item?.mediaId }
+            val found = _state.value.queue.find { it.key == item?.mediaId }
+            // Fallback: turunkan current dari metadata controller bila queue divergen.
+            val track = found ?: item?.let { fallbackTrack(it) }
             if (track != null) {
+                if (!_state.value.queue.any { it.key == track.key }) {
+                    _state.value = _state.value.copy(queue = _state.value.queue + track)
+                }
                 _state.value = _state.value.copy(current = track)
                 recordHistory(track)
             }
@@ -166,7 +196,7 @@ class PlaybackViewModel @Inject constructor(
 
     private fun startTicker() {
         ticker?.cancel()
-        ticker = scope.launch {
+        ticker = viewModelScope.launch {
             while (true) {
                 try {
                     val c = controller
@@ -196,26 +226,43 @@ class PlaybackViewModel @Inject constructor(
     }
 
     fun playTrack(track: Track, queue: List<Track> = listOf(track)) {
-        scope.launch {
+        viewModelScope.launch {
             val items = mutableListOf<MediaItem>()
+            val okQueue = mutableListOf<Track>()
+            var failed = 0
             for (t in queue) {
-                val url = resolveUrl(t) ?: return@launch
+                val url = resolveUrl(t)
+                if (url == null) {
+                    failed++
+                    continue
+                }
                 items.add(LiPhifySessionService.buildMediaItem(t.key, t.title, t.artist, t.artwork, url))
+                okQueue.add(t)
             }
-            val startIndex = queue.indexOfFirst { it.key == track.key }.coerceAtLeast(0)
+            if (items.isEmpty()) {
+                if (_state.value.error == null) {
+                    _state.value = _state.value.copy(error = "Semua lagu gagal dimuat, coba lagi")
+                }
+                return@launch
+            }
+            val target = if (okQueue.any { it.key == track.key }) track else okQueue[0]
+            val startIndex = okQueue.indexOfFirst { it.key == target.key }.coerceAtLeast(0)
             withController { c ->
                 c.setMediaItems(items, startIndex, 0)
                 c.prepare()
                 c.play()
             }
-            _state.value = _state.value.copy(queue = queue, current = track, error = null)
-            persistQueue(queue)
-            recordHistory(track)
+            _state.value = _state.value.copy(queue = okQueue, current = target, error = null)
+            persistQueue(okQueue)
+            recordHistory(target)
+            if (failed > 0) {
+                _state.value = _state.value.copy(error = "$failed lagu dilewati (gagal dimuat)")
+            }
         }
     }
 
     fun playNext(track: Track) {
-        scope.launch {
+        viewModelScope.launch {
             val url = resolveUrl(track) ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
             withController { c ->
@@ -233,7 +280,7 @@ class PlaybackViewModel @Inject constructor(
     }
 
     fun addToQueue(track: Track) {
-        scope.launch {
+        viewModelScope.launch {
             val url = resolveUrl(track) ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
             withController { c -> c.addMediaItem(item) }
@@ -257,7 +304,7 @@ class PlaybackViewModel @Inject constructor(
         val t = next.removeAt(from)
         next.add(to, t)
         _state.value = _state.value.copy(queue = next)
-        scope.launch(Dispatchers.IO) { persistQueue(next) }
+        viewModelScope.launch(Dispatchers.IO) { persistQueue(next) }
     }
 
     fun togglePlayPause() = withController { c ->
@@ -277,7 +324,15 @@ class PlaybackViewModel @Inject constructor(
     /** Lazy resolve: lokal = contentUri langsung; YT = re-resolve tiap mau play (URL expired). */
     private suspend fun resolveUrl(t: Track): String? {
         return when (val s = t.source) {
-            is PlaybackSource.Local -> s.uri.toString().ifBlank { null }
+            is PlaybackSource.Local -> {
+                val uri = s.uri.toString()
+                if (uri.isBlank()) {
+                    _state.value = _state.value.copy(error = "File lagu tidak ditemukan, scan ulang Library")
+                    null
+                } else {
+                    uri
+                }
+            }
             is PlaybackSource.YouTube -> try {
                 when (val r = withTimeout(20_000) { repo.resolveStream(s.videoId) }) {
                     is YtResult.Ok -> r.value
@@ -286,7 +341,8 @@ class PlaybackViewModel @Inject constructor(
                         null
                     }
                 }
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.value = _state.value.copy(error = "Gagal ambil data dari YouTube, coba lagi")
                 null
             }
@@ -302,15 +358,17 @@ class PlaybackViewModel @Inject constructor(
                 }
                 QueueEntity(i, t.key, t.title, t.artist, t.artwork, source, localUri, videoId)
             }
-            db.queueDao().clear()
-            db.queueDao().saveAll(entities)
+            androidx.room.withTransaction(db) {
+                db.queueDao().clear()
+                db.queueDao().saveAll(entities)
+            }
         } catch (e: Exception) {
             Log.w("LiPhifyPlayer", "persist queue gagal", e)
         }
     }
 
     private fun recordHistory(t: Track) {
-        scope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val (source, localUri, videoId) = when (val s = t.source) {
                     is PlaybackSource.Local -> Triple("local", s.uri.toString(), null as String?)
@@ -323,6 +381,25 @@ class PlaybackViewModel @Inject constructor(
                 Log.w("LiPhifyPlayer", "history gagal", e)
             }
         }
+    }
+
+    /** Bentuk Track darurat dari metadata controller (queue divergen). */
+    private fun fallbackTrack(item: MediaItem): Track? {
+        val meta = item.mediaMetadata ?: return null
+        val key = item.mediaId.ifBlank { return null }
+        val uri = item.localConfiguration?.uri?.toString() ?: ""
+        val src = when {
+            key.startsWith("yt:") -> PlaybackSource.YouTube(key.removePrefix("yt:"))
+            uri.isNotBlank() -> PlaybackSource.Local(Uri.parse(uri))
+            else -> return null
+        }
+        return Track(
+            key = key,
+            title = meta.title?.toString() ?: "Unknown",
+            artist = meta.artist?.toString() ?: "Unknown",
+            artwork = meta.artworkUri?.toString(),
+            source = src,
+        )
     }
 
     private fun QueueEntity.toTrack(): Track {
@@ -340,6 +417,5 @@ class PlaybackViewModel @Inject constructor(
             controller?.release()
         } catch (_: Exception) {
         }
-        scope.cancel()
     }
 }

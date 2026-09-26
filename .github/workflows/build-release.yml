@@ -3,6 +3,7 @@ name: build-release
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
@@ -16,11 +17,13 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
         with:
+          # Gradle dipin di sini (tanpa wrapper jar di repo) — jangan ubah
+          # versi tanpa uji build penuh.
           gradle-version: 8.7
       - name: Accept SDK licenses + install platform
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Build release APK
         run: gradle :app:assembleRelease --stacktrace
       - name: Sign APK (jika secrets tersedia)
@@ -36,8 +39,10 @@ jobs:
             echo "Signing $APK"
             $ANDROID_HOME/build-tools/35.0.0/apksigner sign --ks /tmp/release.jks \
               --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" \
+              --ks-key-alias "$KEY_ALIAS" \
               --out app/build/outputs/apk/release/LiPhify-release-signed.apk "$APK"
-            rm /tmp/release.jks
+            $ANDROID_HOME/build-tools/35.0.0/apksigner verify --print-certs app/build/outputs/apk/release/LiPhify-release-signed.apk
+            rm -f "$APK" /tmp/release.jks
           else
             echo "Secrets keystore tidak ada — pakai APK unsigned apa adanya."
           fi

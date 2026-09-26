@@ -1,4 +1,4 @@
-# Definition of Done — Aria (working title) v1.0
+# Definition of Done — LiPhify v1.0
 
 Rilis v1.0 dianggap selesai kalau SEMUA poin di bawah ini terpenuhi. P1 (PRD-101-104) TIDAK termasuk gate ini — dicatat eksplisit sebagai backlog v1.1, bukan silently didrop.
 
@@ -26,7 +26,7 @@ Rilis v1.0 dianggap selesai kalau SEMUA poin di bawah ini terpenuhi. P1 (PRD-101
 - [ ] Versi NewPipeExtractor yang dipin di build.gradle sesuai 03_VERSION_MATRIX.md, bukan versi acak/latest otomatis.
 
 ## 5. Dokumentasi
-- [ ] [TBD_PACKAGE_NAME] di semua file (termasuk applicationId di build.gradle) sudah diganti dengan nama final, bukan tertinggal placeholder.
+- [ ] `com.zaaam.liphify` di semua file (termasuk applicationId di build.gradle) sudah final, bukan placeholder.
 - [ ] README repo mencatat: cara build, catatan risiko legal (ToS YouTube + kewajiban GPL-3.0 kalau repo dipublish) sebagai pengingat untuk diri sendiri.
 - [ ] 03_VERSION_MATRIX.md diperbarui kalau ada dependency yang ternyata harus pakai versi berbeda dari rekomendasi awal saat implementasi (tandai alasannya).
 

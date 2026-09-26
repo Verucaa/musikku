@@ -1,4 +1,4 @@
-# Architecture — Aria (working title)
+# Architecture — LiPhify
 
 ## 1. Tech Stack
 - **Bahasa/UI**: Kotlin + Jetpack Compose
@@ -13,7 +13,7 @@
 ## 2. Struktur Modul
 Rekomendasi: single-module dulu (bukan multi-module) — alasan utama: build environment kamu di Termux/proot Ubuntu, modul banyak = overhead konfigurasi Gradle yang tidak sepadan untuk project personal. Struktur package per-layer di dalam 1 modul:
 
-com.[TBD_PACKAGE_NAME].aria/
+com.zaaam.liphify/
 - data/
   - local/          Room entities, DAO, MediaStore scanner
   - youtube/        Wrapper/repository di atas NewPipeExtractor (PRD-012)
@@ -52,5 +52,5 @@ Pakai pola Media3 MediaSessionService (bukan Service manual) — sudah handle fo
 - GitHub Actions workflow: build, sign dengan keystore dari secret, upload APK sebagai release artifact/GitHub Release — instal manual via LADB atau transfer file ke device.
 
 ## 7. Lisensi & Legal
-- NewPipeExtractor: GPL-3.0. Karena distribusi cuma sideload pribadi (bukan publikasi ke pihak lain), kewajiban copyleft GPL secara praktis belum "trigger". Kalau nanti repo ini dipush publik, source code Aria otomatis harus ikut lisensi GPL (atau kompatibel) — ini keputusan yang perlu disadari sebelum push publik, bukan sesuatu yang otomatis aman.
+- NewPipeExtractor: GPL-3.0. Repo ini publik, jadi source code LiPhify ikut kewajiban copyleft GPL — sadari sebelum distribusi ke pihak lain.
 - Scraping YouTube tanpa API resmi = pelanggaran ToS YouTube. Risiko diterima secara sadar untuk penggunaan pribadi.
