@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -197,7 +198,7 @@ fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: Sna
 /** Panel Up Next: Shuffle/Repeat di header ala Apple Music + reorder real. */
 @Composable
 private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
-    Column(Modifier.fillMaxWidth().weight(1f)) {
+    Column(Modifier.fillMaxWidth()) {
     Text("Playing Next", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         TextButton(
@@ -226,7 +227,7 @@ private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
             Text(rpLabel)
         }
     }
-    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
         itemsIndexed(state.queue, key = { _, t -> t.key }) { idx, t ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
