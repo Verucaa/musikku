@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -90,10 +95,10 @@ fun TrackRow(
                 Text(track.title, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(subtitle, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)
             }
-            Text(
-                "⋯",
-                fontSize = 18.sp,
-                color = TextSecondary,
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = "Menu lagu",
+                tint = TextSecondary,
                 modifier = Modifier.clickable(onClick = onMenu).padding(8.dp),
             )
         }
@@ -128,12 +133,12 @@ fun TrackSheet(
             }
         }
         if (!picking) {
-            SheetAction("▶  Play Next") { onPlayNext(track); onDismiss() }
-            SheetAction("＋  Play Last") { onPlayLast(track); onDismiss() }
-            SheetAction("📁  Add to Playlist…") { picking = true }
+            SheetAction("Play Next", Icons.Filled.PlayArrow) { onPlayNext(track); onDismiss() }
+            SheetAction("Play Last", Icons.Filled.PlaylistAdd) { onPlayLast(track); onDismiss() }
+            SheetAction("Add to Playlist…", Icons.Filled.CreateNewFolder) { picking = true }
         } else {
             playlists.forEach { p ->
-                SheetAction("📁  ${p.name}") { onAddToPlaylist(p.id, track); onDismiss() }
+                SheetAction(p.name, Icons.Filled.PlaylistAdd) { onAddToPlaylist(p.id, track); onDismiss() }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -152,9 +157,12 @@ fun TrackSheet(
 }
 
 @Composable
-private fun SheetAction(label: String, onClick: () -> Unit) {
+private fun SheetAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(label, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = TextSecondary, modifier = Modifier.padding(end = 16.dp))
+            Text(label)
+        }
     }
 }
 

@@ -102,8 +102,8 @@ fun HomeScreen(
                         items(s.trending, key = { it.key }) { t ->
                             Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.trending) }) {
                                 Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                                Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(t.artist, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
+                                Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -136,8 +136,8 @@ fun HomeScreen(
                     items(s.recent, key = { it.key }) { t ->
                         Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.recent) }) {
                             Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                            Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.artist, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -160,8 +160,8 @@ fun HomeScreen(
                     items(s.newMusic, key = { it.key }) { t ->
                         Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.newMusic) }) {
                             Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                            Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.artist, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

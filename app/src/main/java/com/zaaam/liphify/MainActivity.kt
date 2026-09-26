@@ -4,6 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,7 +106,17 @@ fun LiPhifyScaffold(
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp)) {
-                if (!pState.isExpanded && pState.current != null) {
+                AnimatedVisibility(
+                    visible = !pState.isExpanded && pState.current != null,
+                    enter = fadeIn(tween(220)) + slideInVertically(
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    ),
+                    exit = fadeOut(tween(180)) + slideOutVertically(
+                        targetOffsetY = { it / 2 },
+                        animationSpec = tween(180, easing = FastOutSlowInEasing),
+                    ),
+                ) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = Color(0xFF2C2C2E).copy(alpha = 0.78f),
@@ -183,7 +202,23 @@ fun LiPhifyScaffold(
             androidx.activity.compose.BackHandler(enabled = pState.isExpanded) {
                 player.setExpanded(false)
             }
-            if (pState.isExpanded) {
+            AnimatedVisibility(
+                visible = pState.isExpanded,
+                enter = slideInVertically(
+                    initialOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                ) + fadeIn(tween(300)) + scaleIn(
+                    initialScale = 0.96f,
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                ) + fadeOut(tween(300)) + scaleOut(
+                    targetScale = 0.96f,
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                ),
+            ) {
                 NowPlayingScreen(
                     state = pState,
                     player = player,

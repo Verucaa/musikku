@@ -20,8 +20,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -142,10 +149,10 @@ fun LibraryScreen(
                     item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
                     item {
                         Column {
-                            CatRow("🎧", "Playlists", pls.size) { go(LibView.Playlists) }
-                            CatRow("🎤", "Artists", state.artists.size) { go(LibView.Artists) }
-                            CatRow("💿", "Albums", state.albums.size) { go(LibView.Albums) }
-                            CatRow("🎵", "Songs", state.songCount) { go(LibView.Songs) }
+                            CatRow(Icons.Filled.QueueMusic, "Playlists") { go(LibView.Playlists) }
+                            CatRow(Icons.Filled.Person, "Artists") { go(LibView.Artists) }
+                            CatRow(Icons.Filled.Album, "Albums") { go(LibView.Albums) }
+                            CatRow(Icons.Filled.MusicNote, "Songs") { go(LibView.Songs) }
                         }
                     }
                     item {
@@ -154,8 +161,8 @@ fun LibraryScreen(
                             items(state.recentlyAdded, key = { it.key }) { t ->
                                 Column(Modifier.padding(end = 12.dp).width(140.dp).clickable { playAll(t) }) {
                                     Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                                    Text(t.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                    Text(t.artist, maxLines = 1, color = com.zaaam.liphify.ui.theme.TextSecondary, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text(t.artist, fontSize = 12.sp, maxLines = 1, color = com.zaaam.liphify.ui.theme.TextSecondary, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -224,15 +231,16 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun CatRow(icon: String, label: String, count: Int, onClick: () -> Unit) {
+private fun CatRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Glyph pink polos ala Apple Music (tanpa kotak).
-            Text(icon, fontSize = 22.sp, modifier = Modifier.width(34.dp))
+            // Glyph polos ala Apple Music (tanpa kotak).
+            Icon(icon, contentDescription = null, tint = com.zaaam.liphify.ui.theme.Accent, modifier = Modifier.width(34.dp).size(22.dp))
             Text(label, Modifier.weight(1f), fontSize = 17.sp)
-            Text("›", color = com.zaaam.liphify.ui.theme.TextHint, fontSize = 20.sp)
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = com.zaaam.liphify.ui.theme.TextHint)
         }
-        HorizontalDivider(color = com.zaaam.liphify.ui.theme.Divider)
+        // Inset: divider mulai setelah ikon (34dp), bukan full-width.
+        HorizontalDivider(color = com.zaaam.liphify.ui.theme.Divider, modifier = Modifier.padding(start = 34.dp))
     }
 }
 

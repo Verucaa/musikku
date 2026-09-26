@@ -2,7 +2,6 @@ package com.zaaam.liphify.ui.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.common.GENRES
+import com.zaaam.liphify.ui.common.GenreTile
 import com.zaaam.liphify.ui.common.LargeTitle
 import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
@@ -46,13 +46,6 @@ import com.zaaam.liphify.ui.player.PlaybackViewModel
 import com.zaaam.liphify.ui.playlist.PlaylistViewModel
 import com.zaaam.liphify.ui.theme.SurfaceSecondary
 import com.zaaam.liphify.ui.theme.TextSecondary
-
-private val GENRES = listOf(
-    "Pop" to (Color(0xFFFC5C7D) to Color(0xFF6A82FB)),
-    "Hip-Hop" to (Color(0xFFF7B733) to Color(0xFFFC4A1A)),
-    "R&B" to (Color(0xFF8E2DE2) to Color(0xFF4A00E0)),
-    "Electronic" to (Color(0xFF11998E) to Color(0xFF38EF7D)),
-)
 
 @Composable
 fun SearchScreen(
@@ -138,18 +131,11 @@ fun SearchScreen(
                 item {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        modifier = Modifier.height(240.dp),
+                        modifier = Modifier.height(500.dp),
                         userScrollEnabled = false,
                     ) {
                         items(GENRES) { (name, colors) ->
-                            Box(
-                                Modifier.padding(6.dp).fillMaxWidth().height(104.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Brush.linearGradient(listOf(colors.first, colors.second)))
-                                    .clickable { vm.onQuery(name) }
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.BottomStart,
-                            ) { Text(name, fontWeight = FontWeight.Bold) }
+                            GenreTile(name, colors) { vm.onQuery(name) }
                         }
                     }
                 }
@@ -182,7 +168,6 @@ fun SearchScreen(
                         val track = vm.ytAsTrack(y)
                         TrackRow(
                             track = track,
-                            subtitle = "YouTube",
                             onPlay = { player.playTrack(track) },
                             onMenu = { menu = track },
                         )

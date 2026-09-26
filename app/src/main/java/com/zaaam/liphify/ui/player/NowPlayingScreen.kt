@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,17 +23,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -93,7 +107,28 @@ fun NowPlayingScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // Swipe-down-to-dismiss: drag handle di atas sekarang beneran fungsional,
+    // bukan cuma dekorasi. Lewat ambang batas -> collapse ke mini-player.
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    Box(
+        Modifier.fillMaxSize()
+            .offset { IntOffset(0, dragOffset.roundToInt()) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                        if (dragOffset > 220f) {
+                            player.setExpanded(false)
+                        } else {
+                            dragOffset = 0f
+                        }
+                    },
+                    onVerticalDrag = { change, amount ->
+                        change.consume()
+                        dragOffset = (dragOffset + amount).coerceAtLeast(0f)
+                    },
+                )
+            },
+    ) {
         // Background: artwork blur + overlay gelap (fallback gradient netral).
         Box(
             Modifier.fillMaxSize()
@@ -121,7 +156,7 @@ fun NowPlayingScreen(
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { if (cur != null) menu = cur }) {
-                    Text("⋯", fontSize = 20.sp)
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Menu lagu")
                 }
             }
             if (cur != null) {
@@ -130,12 +165,11 @@ fun NowPlayingScreen(
                     AsyncImage(
                         model = cur.artwork,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 20.dp),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                     )
                 } else {
                     Box(
-                        Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 20.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                        Modifier.fillMaxWidth().aspectRatio(1f)
                             .background(Color(0x2E000000)),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -150,11 +184,15 @@ fun NowPlayingScreen(
                         Text(cur.title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
                         Text(cur.artist, fontSize = 19.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
                     }
-                    TextButton(onClick = { player.let { plVm.toggleFavorite(cur) } }) {
-                        Text(if (isFav) "★" else "☆", fontSize = 24.sp, color = if (isFav) Accent else Color.White.copy(alpha = 0.8f))
+                    IconButton(onClick = { player.let { plVm.toggleFavorite(cur) } }) {
+                        Icon(
+                            if (isFav) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isFav) "Hapus dari Favorit" else "Tambah ke Favorit",
+                            tint = if (isFav) Accent else Color.White.copy(alpha = 0.8f),
+                        )
                     }
-                    TextButton(onClick = { menu = cur }) {
-                        Text("⋯", fontSize = 20.sp, color = Color.White.copy(alpha = 0.8f))
+                    IconButton(onClick = { menu = cur }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "Menu lagu", tint = Color.White.copy(alpha = 0.8f))
                     }
                 }
 
@@ -224,7 +262,9 @@ fun NowPlayingScreen(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Spacer(Modifier.weight(1f))
                     // PRD-101 masih P1: disabled jujur.
-                    TextButton(onClick = {}, enabled = false) { Text("💬", color = Color.White.copy(alpha = 0.35f)) }
+                    IconButton(onClick = {}, enabled = false) {
+                        Icon(Icons.Filled.Subtitles, contentDescription = "Lirik belum tersedia", tint = Color.White.copy(alpha = 0.35f))
+                    }
                     Spacer(Modifier.width(24.dp))
                     IconButton(
                         onClick = {
@@ -233,7 +273,7 @@ fun NowPlayingScreen(
                             }
                         },
                     ) {
-                        Text("◎", fontSize = 22.sp, color = Color.White.copy(alpha = 0.35f))
+                        Icon(Icons.Filled.Speaker, contentDescription = "Output audio", tint = Color.White.copy(alpha = 0.35f))
                     }
                     Spacer(Modifier.width(24.dp))
                     IconButton(onClick = { player.toggleQueue() }) {
@@ -290,19 +330,21 @@ private fun QueuePanel(
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
             QueuePill(
-                label = if (state.shuffleEnabled) "🔀 Shuffle On" else "🔀 Shuffle",
+                label = if (state.shuffleEnabled) "Shuffle On" else "Shuffle",
+                icon = Icons.Filled.Shuffle,
                 on = state.shuffleEnabled,
                 modifier = Modifier.weight(1f),
                 onClick = { player.setShuffle(!state.shuffleEnabled) },
             )
             Spacer(Modifier.width(8.dp))
             val rpLabel = when (state.repeatMode) {
-                Player.REPEAT_MODE_ONE -> "🔂 Repeat 1"
-                Player.REPEAT_MODE_ALL -> "🔁 Repeat"
-                else -> "🔁 Repeat"
+                Player.REPEAT_MODE_ONE -> "Repeat 1"
+                Player.REPEAT_MODE_ALL -> "Repeat"
+                else -> "Repeat"
             }
             QueuePill(
                 label = rpLabel,
+                icon = if (state.repeatMode == Player.REPEAT_MODE_ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                 on = state.repeatMode != Player.REPEAT_MODE_OFF,
                 modifier = Modifier.weight(1f),
                 onClick = {
@@ -346,7 +388,12 @@ private fun QueuePanel(
                     Modifier.fillMaxWidth().clickable(onClick = onAddSongs).padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("＋", fontSize = 22.sp, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(end = 12.dp))
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(end = 12.dp),
+                    )
                     Text("Add Songs", fontSize = 16.sp)
                 }
             }
@@ -358,13 +405,21 @@ private fun QueuePanel(
 }
 
 @Composable
-private fun QueuePill(label: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun QueuePill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    on: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     TextButton(
         onClick = onClick,
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(if (on) Accent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.12f)),
     ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 13.sp, color = Color.White)
     }
 }

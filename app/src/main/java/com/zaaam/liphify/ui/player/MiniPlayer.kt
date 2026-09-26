@@ -47,10 +47,13 @@ fun MiniPlayer(
                 Text(cur.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)
             }
             IconButton(onClick = onToggle) {
-                Icon(if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
+                Icon(
+                    if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (state.isPlaying) "Jeda" else "Putar",
+                )
             }
             IconButton(onClick = onNext) {
-                Icon(Icons.Filled.SkipNext, contentDescription = null)
+                Icon(Icons.Filled.SkipNext, contentDescription = "Lagu berikutnya")
             }
         }
         if (state.durationMs > 0) {
