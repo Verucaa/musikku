@@ -10,6 +10,8 @@ import com.zaaam.liphify.domain.model.Track
 import com.zaaam.liphify.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +35,7 @@ class LibraryViewModel @Inject constructor(
     private val db: AppDatabase,
     private val scanner: MediaStoreScanner,
     private val repo: MusicRepository,
-) : androidx.lifecycle.ViewModel() {
+) : ViewModel() {
     private val _state = MutableStateFlow(LibraryUiState())
     val state: StateFlow<LibraryUiState> = _state
 
@@ -50,7 +52,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun refresh() {
-        viewModelScope2().launch {
+        viewModelScope.launch {
             if (!hasPermission()) {
                 _state.value = _state.value.copy(needsPermission = true)
                 return@launch
@@ -60,7 +62,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun scan() {
-        viewModelScope2().launch {
+        viewModelScope.launch {
             _state.value = _state.value.copy(scanning = true, needsPermission = false)
             try {
                 scanner.scan()
@@ -87,8 +89,4 @@ class LibraryViewModel @Inject constructor(
             scanning = false,
         )
     }
-
-    private fun viewModelScope2() = kotlinx.coroutines.CoroutineScope(
-        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main,
-    )
 }

@@ -6,6 +6,8 @@ import com.zaaam.liphify.data.youtube.YtTrack
 import com.zaaam.liphify.domain.model.PlaybackSource
 import com.zaaam.liphify.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,16 +28,13 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repo: MusicRepository,
-) : androidx.lifecycle.ViewModel() {
+) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state
     private val queryFlow = MutableStateFlow("")
-    private val scope = kotlinx.coroutines.CoroutineScope(
-        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main,
-    )
 
     init {
-        scope.launch {
+        viewModelScope.launch {
             queryFlow.debounce(150).collectLatest { q ->
                 if (q.isBlank()) {
                     _state.value = _state.value.copy(local = emptyList(), yt = emptyList(), ytError = null)
@@ -45,7 +44,7 @@ class SearchViewModel @Inject constructor(
                 _state.value = _state.value.copy(local = local)
             }
         }
-        scope.launch {
+        viewModelScope.launch {
             queryFlow.debounce(400).collectLatest { q ->
                 if (q.isBlank()) return@collectLatest
                 _state.value = _state.value.copy(ytLoading = true, ytError = null)
