@@ -30,6 +30,8 @@ class MusicRepository @Inject constructor(
 
     suspend fun searchYouTube(q: String) = yt.search(q)
 
+    suspend fun trending() = yt.trending()
+
     suspend fun localSongs(): List<Track> =
         try {
             db.trackDao().allSongs().map { it.toTrack() }
