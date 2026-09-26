@@ -3,7 +3,6 @@ package com.zaaam.liphify.ui.playlist
 import com.zaaam.liphify.data.local.AppDatabase
 import com.zaaam.liphify.data.local.PlaylistEntity
 import com.zaaam.liphify.data.local.PlaylistTrackEntity
-import androidx.room.withTransaction
 import com.zaaam.liphify.domain.model.PlaybackSource
 import com.zaaam.liphify.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -86,10 +85,7 @@ class PlaylistViewModel @Inject constructor(
     fun deletePlaylist(id: Long) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                androidx.room.withTransaction(db) {
-                    db.playlistDao().deleteAllTracks(id)
-                    db.playlistDao().delete(id)
-                }
+                db.playlistDao().deleteCascade(id)
                 refresh()
             } catch (e: Exception) {
                 android.util.Log.w("LiPhifyPl", "delete gagal", e)

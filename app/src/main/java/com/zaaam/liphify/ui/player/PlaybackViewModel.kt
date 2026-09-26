@@ -9,7 +9,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.room.withTransaction
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaaam.liphify.data.local.AppDatabase
 import com.zaaam.liphify.data.local.HistoryEntity
@@ -359,10 +358,7 @@ class PlaybackViewModel @Inject constructor(
                 }
                 QueueEntity(i, t.key, t.title, t.artist, t.artwork, source, localUri, videoId)
             }
-            androidx.room.withTransaction(db) {
-                db.queueDao().clear()
-                db.queueDao().saveAll(entities)
-            }
+            db.queueDao().replaceAll(entities)
         } catch (e: Exception) {
             Log.w("LiPhifyPlayer", "persist queue gagal", e)
         }

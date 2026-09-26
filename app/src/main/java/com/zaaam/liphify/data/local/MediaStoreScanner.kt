@@ -55,19 +55,24 @@ class MediaStoreScanner @Inject constructor(
                 }
             }
             // Sinkronisasi atomik: upsert + hapus yang hilang + purge non-folder.
-            db.withTransaction {
-                db.trackDao().upsertAll(items)
-                val keep = items.map { it.contentUri }.toSet()
-                val toDelete = db.trackDao().existingUris().filter { it !in keep }
-                toDelete.chunked(500).forEach { chunk ->
-                    db.trackDao().deleteByUris(chunk)
-                }
+            // Sinkronisasi: upsert + hapus yang hilang + purge non-folder.
+            // (Sekuensial tanpa wrapper transaksi — window inkonsistensi kecil,
+            // sembuh total di scan berikutnya.)
+            db.trackDao().upsertAll(items)
+            val keep = items.map { it.contentUri }.toSet()
+            val toDelete = db.trackDao().existingUris().filter { it !in keep }
+            toDelete.chunked(500).forEach { chunk ->
                 try {
-                    val purged = db.trackDao().purgeNonAppFolder()
-                    if (purged > 0) Log.d("LiPhifyScan", "purge non-folder: $purged baris")
+                    db.trackDao().deleteByUris(chunk)
                 } catch (e: Exception) {
-                    Log.w("LiPhifyScan", "purge gagal", e)
+                    Log.w("LiPhifyScan", "delete chunk gagal", e)
                 }
+            }
+            try {
+                val purged = db.trackDao().purgeNonAppFolder()
+                if (purged > 0) Log.d("LiPhifyScan", "purge non-folder: $purged baris")
+            } catch (e: Exception) {
+                Log.w("LiPhifyScan", "purge gagal", e)
             }
             Log.d("LiPhifyScan", "scan selesai: ${items.size} lagu di $APP_RELATIVE_PATH")
             items.size

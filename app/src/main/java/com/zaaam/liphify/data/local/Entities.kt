@@ -138,6 +138,12 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :id")
     suspend fun deleteAllTracks(id: Long)
 
+    /** Hapus playlist + anaknya berurutan. */
+    suspend fun deleteCascade(id: Long) {
+        deleteAllTracks(id)
+        delete(id)
+    }
+
     @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlistId = :id")
     suspend fun trackCount(id: Long): Int
 
@@ -164,6 +170,12 @@ interface QueueDao {
 
     @Query("DELETE FROM queue")
     suspend fun clear()
+
+    /** Ganti isi queue (clear+insert berurutan; window kecil, sembuh di persist berikut). */
+    suspend fun replaceAll(items: List<QueueEntity>) {
+        clear()
+        saveAll(items)
+    }
 }
 
 @Dao
