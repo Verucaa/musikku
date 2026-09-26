@@ -97,10 +97,13 @@ fun LibraryScreen(
             LibView.Main -> {
                 LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
-                        CatRow("🎧", "Playlists", pls.size) { view = LibView.Playlists }
-                        CatRow("🎤", "Artists", state.artists.size) { view = LibView.Artists }
-                        CatRow("💿", "Albums", state.albums.size) { view = LibView.Albums }
-                        CatRow("🎵", "Songs", state.songCount) { view = LibView.Songs }
+                    item {
+                        Column {
+                            CatRow("🎧", "Playlists", pls.size) { view = LibView.Playlists }
+                            CatRow("🎤", "Artists", state.artists.size) { view = LibView.Artists }
+                            CatRow("💿", "Albums", state.albums.size) { view = LibView.Albums }
+                            CatRow("🎵", "Songs", state.songCount) { view = LibView.Songs }
+                        }
                     }
                     item {
                         Text("Recently Added", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
