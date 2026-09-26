@@ -1,10 +1,16 @@
 package com.zaaam.liphify.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.zaaam.liphify.R
 
 val BgMain = Color(0xFF000000)
 val SurfaceElevated = Color(0xFF1C1C1E)
@@ -15,9 +21,23 @@ val TextSecondary = Color(0x99FFFFFF)
 val TextHint = Color(0x66FFFFFF)
 val Accent = Color(0xFFFA233B)
 
-// Inter dibundle sebagai font resource bila file tersedia; fallback ke SansSerif
-// agar konsisten dan tidak ketiban font bawaan OEM.
-val AppFont: FontFamily = FontFamily.SansSerif
+// Inter (OFL) dibundle sebagai font resource — pengganti SF Pro yang
+// berlisensi khusus Apple dan tidak boleh didistribusikan.
+val AppFont = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
+)
+
+private val AppTypography = Typography(
+    headlineLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 34.sp),
+    titleLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 22.sp),
+    titleMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
+    bodyLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 15.sp),
+    bodyMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 13.sp),
+    labelSmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 11.sp),
+)
 
 private val Scheme = darkColorScheme(
     background = BgMain,
@@ -30,5 +50,5 @@ private val Scheme = darkColorScheme(
 
 @Composable
 fun LiPhifyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = Scheme, content = content)
+    MaterialTheme(colorScheme = Scheme, typography = AppTypography, content = content)
 }

@@ -16,6 +16,8 @@ data class TrackEntity(
     val durationMs: Long,
     val contentUri: String,
     val dateAdded: Long,
+    /** URI artwork album nyata dari MediaStore (null kalau tidak ada). */
+    val artworkUri: String? = null,
 )
 
 @Entity(tableName = "yt_cache")
@@ -88,7 +90,7 @@ interface TrackDao {
     @Query("SELECT DISTINCT album FROM tracks WHERE album != '' ORDER BY album ASC")
     suspend fun albums(): List<String>
 
-    @Query("SELECT * FROM tracks WHERE title LIKE '%' || :q || '%' OR artist LIKE '%' || :q || '%' OR album LIKE '%' || :q || '%' ORDER BY title ASC LIMIT 100")
+    @Query("SELECT * FROM tracks WHERE title LIKE '%' || :q || '%' ESCAPE '\\' OR artist LIKE '%' || :q || '%' ESCAPE '\\' OR album LIKE '%' || :q || '%' ESCAPE '\\' ORDER BY title ASC LIMIT 100")
     suspend fun search(q: String): List<TrackEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

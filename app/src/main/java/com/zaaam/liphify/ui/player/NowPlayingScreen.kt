@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -39,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 /**
  * PRD-005: Now Playing full-screen ala Apple Music.
@@ -66,9 +69,17 @@ import coil.compose.AsyncImage
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: SnackbarHostState) {
+fun NowPlayingScreen(
+    state: PlayerUiState,
+    player: PlaybackViewModel,
+    snack: SnackbarHostState,
+    plVm: com.zaaam.liphify.ui.playlist.PlaylistViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+) {
     val cur = state.current
     val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var menu by remember { mutableStateOf<com.zaaam.liphify.domain.model.Track?>(null) }
+    val pls by plVm.playlists.collectAsState()
 
     LaunchedEffect(state.error) {
         if (state.error != null) {
@@ -97,8 +108,8 @@ fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: Sna
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Tutup")
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { /* info: tidak ada menu global di scope v1 */ }) {
-                    Icon(Icons.Filled.MusicNote, contentDescription = null, tint = Color.Transparent)
+                IconButton(onClick = { if (cur != null) menu = cur }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Opsi")
                 }
             }
             if (cur != null) {
@@ -180,6 +191,16 @@ fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: Sna
                     // PRD-101 masih P1: disabled jujur.
                     TextButton(onClick = {}, enabled = false) { Text("💬", color = Color.White.copy(alpha = 0.35f)) }
                     Spacer(Modifier.width(24.dp))
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                snack.showSnackbar("Output audio: hanya speaker/earphone di app ini")
+                            }
+                        },
+                    ) {
+                        Text("◎", fontSize = 22.sp, color = Color.White.copy(alpha = 0.35f))
+                    }
+                    Spacer(Modifier.width(24.dp))
                     IconButton(onClick = { player.toggleQueue() }) {
                         Icon(Icons.Filled.QueueMusic, contentDescription = "Queue")
                     }
@@ -192,6 +213,15 @@ fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: Sna
                 Text("Tidak ada lagu. Pilih dari Library atau Search.")
             }
         }
+        com.zaaam.liphify.ui.common.TrackSheet(
+            track = menu,
+            playlists = pls,
+            onDismiss = { menu = null },
+            onPlayNext = { player.playNext(it) },
+            onPlayLast = { player.addToQueue(it) },
+            onCreatePlaylist = { plVm.create(it) },
+            onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+        )
     }
 }
 
@@ -228,9 +258,10 @@ private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
         }
     }
     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
-        itemsIndexed(state.queue, key = { _, t -> t.key }) { idx, t ->
+        itemsIndexed(state.queue, key = { idx, t -> "$idx:${t.key.hashCode()}" }) { idx, t ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+                com.zaaam.liphify.ui.common.Artwork(model = t.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text(
                         t.title,
                         maxLines = 1,
@@ -247,6 +278,9 @@ private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
                 }
             }
         }
+    }
+    TextButton(onClick = { player.toggleQueue(false) }, modifier = Modifier.fillMaxWidth()) {
+        Text("Tutup")
     }
     }
 }

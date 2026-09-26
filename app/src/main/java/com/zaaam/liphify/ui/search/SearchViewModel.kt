@@ -9,11 +9,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 data class SearchUiState(
@@ -32,6 +34,8 @@ class SearchViewModel @Inject constructor(
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state
     private val queryFlow = MutableStateFlow("")
+    /** Job YT terkontrol: cegah request menumpuk saat ketik cepat. */
+    private var ytJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -40,17 +44,39 @@ class SearchViewModel @Inject constructor(
                     _state.value = _state.value.copy(local = emptyList(), yt = emptyList(), ytError = null)
                     return@collectLatest
                 }
+                // Query <2 char + escape wildcard: hindari full-table LIKE tiap keystroke.
+                if (q.trim().length < 2) {
+                    _state.value = _state.value.copy(local = emptyList())
+                    return@collectLatest
+                }
                 val local = repo.searchLocal(q)
-                _state.value = _state.value.copy(local = local)
+                if (queryFlow.value == q) {
+                    _state.value = _state.value.copy(local = local)
+                }
             }
         }
         viewModelScope.launch {
             queryFlow.debounce(400).collectLatest { q ->
-                if (q.isBlank()) return@collectLatest
+                ytJob?.cancel()
+                if (q.isBlank() || q.trim().length < 2) {
+                    _state.value = _state.value.copy(ytLoading = false)
+                    return@collectLatest
+                }
                 _state.value = _state.value.copy(ytLoading = true, ytError = null)
-                when (val r = repo.searchYouTube(q)) {
-                    is YtResult.Ok -> _state.value = _state.value.copy(yt = r.value, ytLoading = false)
-                    is YtResult.Fail -> _state.value = _state.value.copy(yt = emptyList(), ytLoading = false, ytError = r.message)
+                val asked = q
+                ytJob = launch {
+                    try {
+                        val result = withTimeout(15_000) { repo.searchYouTube(asked) }
+                        // Hanya tulis kalau query belum berubah (cegah hasil basi).
+                        if (queryFlow.value != asked) return@launch
+                        when (result) {
+                            is YtResult.Ok -> _state.value = _state.value.copy(yt = result.value, ytLoading = false)
+                            is YtResult.Fail -> _state.value = _state.value.copy(yt = emptyList(), ytLoading = false, ytError = result.message)
+                        }
+                    } catch (_: Throwable) {
+                        if (queryFlow.value != asked) return@launch
+                        _state.value = _state.value.copy(yt = emptyList(), ytLoading = false, ytError = "Gagal ambil data dari YouTube, coba lagi")
+                    }
                 }
             }
         }

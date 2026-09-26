@@ -2,6 +2,7 @@ package com.zaaam.liphify.ui.home
 
 import android.net.Uri
 import com.zaaam.liphify.data.local.AppDatabase
+import com.zaaam.liphify.data.repository.toTrack
 import com.zaaam.liphify.domain.model.PlaybackSource
 import com.zaaam.liphify.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,11 +39,7 @@ class HomeViewModel @Inject constructor(
                 Track(it.trackKey, it.title, it.artist, "", 0L, it.artwork, src)
             }
             val added = withContext(Dispatchers.IO) { db.trackDao().recentlyAdded(10) }
-            val newMusic = added.mapNotNull { e ->
-                withContext(Dispatchers.IO) { db.trackDao().allSongs().find { it.mediaId == e.mediaId } }
-            }.map {
-                Track("local:${it.mediaId}", it.title, it.artist, it.album, it.durationMs, it.contentUri, PlaybackSource.Local(Uri.parse(it.contentUri)))
-            }
+            val newMusic = added.map { it.toTrack() }
             _state.value = HomeUiState(recent, newMusic)
         }
     }

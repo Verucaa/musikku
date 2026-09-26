@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,14 +34,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.zaaam.liphify.data.local.PlaylistTrackEntity
 import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.common.Artwork
+import com.zaaam.liphify.ui.common.LargeTitle
 import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
 import com.zaaam.liphify.ui.player.PlaybackViewModel
@@ -93,7 +96,7 @@ fun LibraryScreen(
         when (val v = view) {
             LibView.Main -> {
                 LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                    item {
+                    item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
                         CatRow("🎧", "Playlists", pls.size) { view = LibView.Playlists }
                         CatRow("🎤", "Artists", state.artists.size) { view = LibView.Artists }
                         CatRow("💿", "Albums", state.albums.size) { view = LibView.Albums }
@@ -104,7 +107,7 @@ fun LibraryScreen(
                         LazyRow {
                             items(state.recentlyAdded, key = { it.key }) { t ->
                                 Column(Modifier.padding(end = 12.dp).width(140.dp).clickable { playAll(t) }) {
-                                    AsyncImage(model = t.artwork, contentDescription = null, modifier = Modifier.width(140.dp).height(140.dp).clip(RoundedCornerShape(10.dp)))
+                                    Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
                                     Text(t.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                     Text(t.artist, maxLines = 1, color = com.zaaam.liphify.ui.theme.TextSecondary, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 }
@@ -159,14 +162,21 @@ fun LibraryScreen(
 
 @Composable
 private fun CatRow(icon: String, label: String, count: Int, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp))
-                .background(com.zaaam.liphify.ui.theme.Accent),
-            contentAlignment = Alignment.Center,
-        ) { Text(icon) }
-        Text(label, Modifier.padding(start = 12.dp).weight(1f), fontSize = 17.sp)
-        Text("$count ›", color = com.zaaam.liphify.ui.theme.TextHint)
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(30.dp).clip(RoundedCornerShape(7.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(com.zaaam.liphify.ui.theme.Accent, Color(0xFFC40E2B)),
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) { Text(icon) }
+            Text(label, Modifier.padding(start = 12.dp).weight(1f), fontSize = 17.sp)
+            Text("›", color = com.zaaam.liphify.ui.theme.TextHint, fontSize = 20.sp)
+        }
+        Divider(color = com.zaaam.liphify.ui.theme.Divider)
     }
 }
 

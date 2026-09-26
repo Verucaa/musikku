@@ -1,18 +1,19 @@
 package com.zaaam.liphify.ui.home
 
-import androidx.compose.foundation.background
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,75 +23,107 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.common.Artwork
+import com.zaaam.liphify.ui.common.LargeTitle
 import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
+import com.zaaam.liphify.ui.library.LibraryViewModel
 import com.zaaam.liphify.ui.player.PlaybackViewModel
 import com.zaaam.liphify.ui.playlist.PlaylistViewModel
+import com.zaaam.liphify.ui.theme.TextSecondary
 
+/**
+ * Home: 100% data nyata. Tidak ada hero rekomendasi dummy — bagian itu
+ * di-skip sesuai aturan (rekomendasi algoritmik di luar scope v1).
+ */
 @Composable
-fun HomeScreen(player: PlaybackViewModel, vm: HomeViewModel = hiltViewModel(), plVm: PlaylistViewModel = hiltViewModel()) {
+fun HomeScreen(
+    player: PlaybackViewModel,
+    vm: HomeViewModel = hiltViewModel(),
+    plVm: PlaylistViewModel = hiltViewModel(),
+    libVm: LibraryViewModel = hiltViewModel(),
+) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
+    val lib by libVm.state.collectAsState()
     var menu by remember { mutableStateOf<Track?>(null) }
+    val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        libVm.scanIfEmpty(); vm.refresh()
+    }
     LaunchedEffect(Unit) { vm.refresh() }
 
     LazyColumn(Modifier.fillMaxSize()) {
-        item {
-            Text("Top Picks", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            LazyRow(Modifier.padding(vertical = 8.dp)) {
-                item {
-                    // STATIC PER PRD-007 — recommendation algorithm out of scope v1
-                    Box(
-                        Modifier.padding(start = 16.dp, end = 8.dp).width(280.dp).height(150.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Brush.linearGradient(listOf(Color(0xFF7B2FF7), Color(0xFFF72F8F))))
-                            .clickable { if (s.newMusic.isNotEmpty()) player.playTrack(s.newMusic.first(), s.newMusic) },
-                    ) {
-                        Text("New Music Mix", Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.BottomStart))
+        item { LargeTitle("Home") }
+        if (lib.needsPermission) {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    Text("Perlu izin audio untuk memindai musik di perangkat.", color = TextSecondary)
+                    Button(onClick = { launcher.launch(perm) }, modifier = Modifier.padding(vertical = 8.dp)) {
+                        Text("Beri izin & pindai")
                     }
                 }
             }
         }
         item {
-            Text("Recently Played", Modifier.padding(start = 16.dp), fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Text("Recently Played", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-        item {
-            if (s.recent.isEmpty()) {
+        if (s.recent.isEmpty()) {
+            item {
                 Text(
                     "Belum ada riwayat, mulai putar musik dari Library",
                     Modifier.padding(16.dp),
-                    color = com.zaaam.liphify.ui.theme.TextSecondary,
+                    color = TextSecondary,
                 )
-            } else {
+            }
+        } else {
+            item {
                 LazyRow(Modifier.padding(vertical = 8.dp)) {
                     items(s.recent, key = { it.key }) { t ->
-                        Column(
-                            Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.recent) },
-                        ) {
-                            AsyncImage(
-                                model = t.artwork,
-                                contentDescription = null,
-                                modifier = Modifier.width(140.dp).height(140.dp).clip(RoundedCornerShape(10.dp)),
-                            )
-                            Text(t.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            Text(t.artist, maxLines = 1, color = com.zaaam.liphify.ui.theme.TextSecondary, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.recent) }) {
+                            Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
+                            Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
             }
         }
         item {
-            Text("New Music", Modifier.padding(start = 16.dp), fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Text("Recently Added", Modifier.padding(start = 16.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        if (s.newMusic.isEmpty()) {
+            item {
+                Text(
+                    "Belum ada musik. Beri izin lalu pindai dari Library.",
+                    Modifier.padding(16.dp),
+                    color = TextSecondary,
+                )
+            }
+        } else {
+            item {
+                LazyRow(Modifier.padding(vertical = 8.dp)) {
+                    items(s.newMusic, key = { it.key }) { t ->
+                        Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.newMusic) }) {
+                            Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
+                            Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Text("New Music", Modifier.padding(start = 16.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         items(s.newMusic, key = { it.key }) { t ->
-            Box(Modifier.padding(horizontal = 16.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp)) {
                 TrackRow(track = t, onPlay = { player.playTrack(t, s.newMusic) }, onMenu = { menu = t })
             }
         }

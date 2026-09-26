@@ -26,6 +26,7 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.DATE_ADDED,
         )
@@ -35,11 +36,14 @@ class MediaStoreScanner @Inject constructor(
             val titleCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+            val albumIdCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val durCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val addedCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+            val albumArtBase = android.net.Uri.parse("content://media/external/audio/albumart")
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val uri = ContentUris.withAppendedId(collection, id).toString()
+                val albumId = c.getLong(albumIdCol)
                 items.add(
                     TrackEntity(
                         mediaId = id,
@@ -49,6 +53,11 @@ class MediaStoreScanner @Inject constructor(
                         durationMs = c.getLong(durCol),
                         contentUri = uri,
                         dateAdded = c.getLong(addedCol),
+                        artworkUri = if (albumId > 0) {
+                            ContentUris.withAppendedId(albumArtBase, albumId).toString()
+                        } else {
+                            null
+                        },
                     ),
                 )
             }

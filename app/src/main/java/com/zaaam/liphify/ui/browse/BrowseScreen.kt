@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zaaam.liphify.ui.common.LargeTitle
 
 private val GENRES = listOf(
     "Pop" to (Color(0xFFFC5C7D) to Color(0xFF6A82FB)),
@@ -41,6 +42,7 @@ private val GENRES = listOf(
 @Composable
 fun BrowseScreen(onGenre: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        LargeTitle("New", modifier = Modifier.padding(vertical = 6.dp))
         Text("Browse Categories", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
         Text(
             "Tap genre untuk mencari yang nyata (lokal + YouTube).",
@@ -58,6 +60,12 @@ fun BrowseScreen(onGenre: (String) -> Unit) {
                     contentAlignment = Alignment.BottomStart,
                 ) {
                     Text(name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text(
+                        "♪",
+                        fontSize = 44.sp,
+                        color = Color.White.copy(alpha = 0.25f),
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                    )
                 }
             }
         }

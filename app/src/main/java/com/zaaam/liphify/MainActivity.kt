@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -124,8 +127,22 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
                         TabItem(Tab.Home, Icons.Filled.Home, route, nav, Modifier.weight(1f))
                         TabItem(Tab.New, Icons.Filled.AutoAwesome, route, nav, Modifier.weight(1f))
                         TabItem(Tab.Library, Icons.Filled.LibraryMusic, route, nav, Modifier.weight(1f))
-                        IconButton(onClick = { nav.navigate("search") }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Filled.Search, contentDescription = "Search", tint = TextSecondary)
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            val onSearch = route?.startsWith("search") == true
+                            IconButton(
+                                onClick = { nav.navigate("search") },
+                                modifier = Modifier.size(44.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(
+                                        if (onSearch) Accent else Color.White.copy(alpha = 0.14f),
+                                    ),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Search,
+                                    contentDescription = "Search",
+                                    tint = if (onSearch) Color.White else TextSecondary,
+                                )
+                            }
                         }
                     }
                 }
@@ -135,7 +152,7 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
         Box(Modifier.fillMaxSize().padding(pad).haze(state = hazeState)) {
             NavHost(nav, startDestination = Tab.Library.route) {
                 composable(Tab.Home.route) { HomeScreen(player) }
-                composable(Tab.New.route) { BrowseScreen(onGenre = { nav.navigate("search?preset=$it") }) }
+                composable(Tab.New.route) { BrowseScreen(onGenre = { nav.navigate("search?preset=" + android.net.Uri.encode(it)) }) }
                 composable(Tab.Library.route) { LibraryScreen(player) }
                 composable(
                     "search?preset={preset}",

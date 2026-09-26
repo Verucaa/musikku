@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.zaaam.liphify.data.local.AppDatabase
 import com.zaaam.liphify.data.local.MediaStoreScanner
+import com.zaaam.liphify.data.repository.toTrack
 import com.zaaam.liphify.domain.model.Track
 import com.zaaam.liphify.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -88,14 +89,13 @@ class LibraryViewModel @Inject constructor(
     private suspend fun loadFromDb() {
         val songs = repo.localSongs()
         val dao = db.trackDao()
+        val recentEntities = dao.recentlyAdded(10)
         _state.value = LibraryUiState(
             songs = songs,
             songCount = songs.size,
             artists = dao.artists(),
             albums = dao.albums(),
-            recentlyAdded = dao.recentlyAdded(10).map { e ->
-                repo.localSongs().find { it.key == "local:${e.mediaId}" } ?: return@map null
-            }.filterNotNull(),
+            recentlyAdded = recentEntities.map { it.toTrack() },
             playlistNames = db.playlistDao().playlists().map { it.id to it.name },
             needsPermission = false,
             scanning = false,

@@ -1,15 +1,17 @@
 package com.zaaam.liphify.ui.common
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,13 +24,55 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.zaaam.liphify.R
 import com.zaaam.liphify.data.local.PlaylistEntity
 import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.theme.Divider as DividerColor
+import com.zaaam.liphify.ui.theme.TextSecondary
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Artwork nyata (MediaStore album art / thumbnail YT) + fallback kaca + ikon
+ * kalau null/gagal load. Dipakai di SEMUA list agar tidak ada kotak kosong.
+ */
+@Composable
+fun Artwork(
+    model: Any?,
+    modifier: Modifier = Modifier,
+    radius: Dp = 6.dp,
+    fallbackIconSize: Dp = 22.dp,
+) {
+    if (model != null) {
+        AsyncImage(
+            model = model,
+            contentDescription = null,
+            modifier = modifier.clip(RoundedCornerShape(radius)),
+            error = painterResource(R.drawable.ic_music_note),
+            fallback = painterResource(R.drawable.ic_music_note),
+        )
+    } else {
+        Box(
+            modifier
+                .clip(RoundedCornerShape(radius))
+                .background(Color(0x2E000000)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_music_note),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(fallbackIconSize),
+            )
+        }
+    }
+}
+
 @Composable
 fun TrackRow(
     track: Track,
@@ -36,20 +80,24 @@ fun TrackRow(
     onMenu: () -> Unit,
     subtitle: String = track.artist,
 ) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = track.artwork,
-            contentDescription = null,
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(6.dp)),
-        )
-        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
-            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, color = com.zaaam.liphify.ui.theme.TextSecondary)
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Artwork(model = track.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(track.title, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)
+            }
+            Text(
+                "⋯",
+                fontSize = 18.sp,
+                color = TextSecondary,
+                modifier = Modifier.clickable(onClick = onMenu).padding(8.dp),
+            )
         }
-        TextButton(onClick = onMenu) { Text("⋯", color = com.zaaam.liphify.ui.theme.TextSecondary) }
+        Divider(color = DividerColor)
     }
 }
 
@@ -70,14 +118,13 @@ fun TrackSheet(
     var newName by remember(track.key) { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = track.artwork,
-                contentDescription = null,
-                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)),
-            )
+            Artwork(model = track.artwork, modifier = Modifier.size(52.dp), radius = 8.dp)
             Column(Modifier.padding(start = 12.dp)) {
                 Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.artist, color = com.zaaam.liphify.ui.theme.TextSecondary)
+                Text(
+                    "${track.artist} • ${if (track.source is com.zaaam.liphify.domain.model.PlaybackSource.YouTube) "YouTube" else "Perangkat"}",
+                    color = TextSecondary,
+                )
             }
         }
         if (!picking) {
@@ -109,4 +156,15 @@ private fun SheetAction(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Text(label, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
     }
+}
+
+/** Large title 34/700 ala Apple Music, satu per tab. */
+@Composable
+fun LargeTitle(text: String, modifier: Modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+    Text(
+        text,
+        fontSize = 34.sp,
+        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+        modifier = modifier,
+    )
 }

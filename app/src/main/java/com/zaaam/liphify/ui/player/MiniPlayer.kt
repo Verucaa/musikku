@@ -19,10 +19,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import androidx.compose.ui.unit.sp
+import com.zaaam.liphify.ui.common.Artwork
+import com.zaaam.liphify.ui.theme.TextSecondary
 
 /** PRD-010: tidak dirender sama sekali saat idle. Hairline progress ala Apple Music. */
 @Composable
@@ -39,10 +41,10 @@ fun MiniPlayer(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(model = cur.artwork, contentDescription = null, modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)))
+            Artwork(model = cur.artwork, modifier = Modifier.size(44.dp), radius = 8.dp)
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                Text(cur.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(cur.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = com.zaaam.liphify.ui.theme.TextSecondary)
+                Text(cur.title, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(cur.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)
             }
             IconButton(onClick = onToggle) {
                 Icon(if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
@@ -55,6 +57,8 @@ fun MiniPlayer(
             LinearProgressIndicator(
                 progress = { (state.positionMs.toFloat() / state.durationMs.toFloat()).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(2.dp),
+                color = Color.White.copy(alpha = 0.6f),
+                trackColor = Color.White.copy(alpha = 0.25f),
             )
         }
     }

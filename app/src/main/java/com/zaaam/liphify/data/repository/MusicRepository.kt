@@ -2,6 +2,7 @@ package com.zaaam.liphify.data.repository
 
 import android.net.Uri
 import com.zaaam.liphify.data.local.AppDatabase
+import com.zaaam.liphify.data.local.TrackEntity
 import com.zaaam.liphify.data.youtube.YouTubeRepository
 import com.zaaam.liphify.data.youtube.YtResult
 import com.zaaam.liphify.domain.model.PlaybackSource
@@ -17,33 +18,34 @@ class MusicRepository @Inject constructor(
 ) {
     suspend fun searchLocal(q: String): List<Track> {
         if (q.isBlank()) return emptyList()
-        return db.trackDao().search(q).map {
-            Track(
-                key = "local:${it.mediaId}",
-                title = it.title,
-                artist = it.artist,
-                album = it.album,
-                durationMs = it.durationMs,
-                artwork = it.contentUri,
-                source = PlaybackSource.Local(Uri.parse(it.contentUri)),
-            )
+        return try {
+            // Escape wildcard LIKE supaya ketikan %/_ tidak meledak jadi full-table.
+            val safe = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            db.trackDao().search(safe).map { it.toTrack() }
+        } catch (_: Throwable) {
+            emptyList()
         }
     }
 
     suspend fun searchYouTube(q: String) = yt.search(q)
 
     suspend fun localSongs(): List<Track> =
-        db.trackDao().allSongs().map {
-            Track(
-                key = "local:${it.mediaId}",
-                title = it.title,
-                artist = it.artist,
-                album = it.album,
-                durationMs = it.durationMs,
-                artwork = it.contentUri,
-                source = PlaybackSource.Local(Uri.parse(it.contentUri)),
-            )
+        try {
+            db.trackDao().allSongs().map { it.toTrack() }
+        } catch (_: Throwable) {
+            emptyList()
         }
 
     suspend fun resolveStream(videoId: String) = yt.resolveAudioUrl(videoId)
 }
+
+/** Mapping tunggal entity -> domain. Artwork = URI album art nyata (null = fallback UI). */
+fun TrackEntity.toTrack(): Track = Track(
+    key = "local:$mediaId",
+    title = title,
+    artist = artist,
+    album = album,
+    durationMs = durationMs,
+    artwork = artworkUri,
+    source = PlaybackSource.Local(Uri.parse(contentUri)),
+)
