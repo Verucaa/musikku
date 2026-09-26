@@ -1,6 +1,5 @@
 package com.zaaam.liphify.ui.search
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,60 +11,88 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.common.TrackRow
+import com.zaaam.liphify.ui.common.TrackSheet
 import com.zaaam.liphify.ui.player.PlaybackViewModel
+import com.zaaam.liphify.ui.playlist.PlaylistViewModel
 
 @Composable
-fun SearchScreen(player: PlaybackViewModel, vm: SearchViewModel = hiltViewModel()) {
+fun SearchScreen(
+    preset: String = "",
+    player: PlaybackViewModel,
+    vm: SearchViewModel = hiltViewModel(),
+    plVm: PlaylistViewModel = hiltViewModel(),
+) {
     val s by vm.state.collectAsState()
-    Column(Modifier.fillMaxSize()) {
+    val pls by plVm.playlists.collectAsState()
+    var menu by remember { mutableStateOf<Track?>(null) }
+    LaunchedEffect(preset) { vm.setPreset(preset) }
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         TextField(
             value = s.query,
             onValueChange = { vm.onQuery(it) },
-            placeholder = { Text("Cari lagu, artis, album…") },
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            placeholder = { Text("Search") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             singleLine = true,
         )
         LazyColumn(Modifier.fillMaxSize()) {
             if (s.query.isNotBlank()) {
-                item { Text("Di perangkat", Modifier.padding(12.dp)) }
+                item { Text("Di Perangkat", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                if (s.local.isEmpty()) {
+                    item { Text("Tidak ada hasil lokal", color = com.zaaam.liphify.ui.theme.TextSecondary, modifier = Modifier.padding(vertical = 6.dp)) }
+                }
                 items(s.local, key = { it.key }) { t ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { player.playTrack(t, s.local) }.padding(12.dp),
-                    ) {
-                        Column {
-                            Text(t.title)
-                            Text(t.artist)
-                        }
-                    }
+                    TrackRow(track = t, onPlay = { player.playTrack(t, s.local) }, onMenu = { menu = t })
                 }
                 item {
-                    Row(Modifier.padding(12.dp)) {
-                        Text("YouTube Music")
-                        if (s.ytLoading) CircularProgressIndicator(Modifier.padding(start = 8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
+                        Text("YouTube Music", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (s.ytLoading) CircularProgressIndicator()
                     }
                     if (s.ytError != null) {
-                        Text("Gagal ambil data dari YouTube, coba lagi", Modifier.padding(horizontal = 12.dp))
+                        Text("Gagal ambil data dari YouTube, coba lagi", color = com.zaaam.liphify.ui.theme.TextSecondary)
                     }
                 }
                 items(s.yt, key = { it.videoId }) { y ->
                     val track = vm.ytAsTrack(y)
-                    Row(
-                        Modifier.fillMaxWidth().clickable { player.playTrack(track) }.padding(12.dp),
-                    ) {
-                        Column {
-                            Text(y.title)
-                            Text("YouTube")
-                        }
-                    }
+                    TrackRow(
+                        track = track,
+                        subtitle = "YouTube",
+                        onPlay = { player.playTrack(track) },
+                        onMenu = { menu = track },
+                    )
                 }
             } else {
-                item { Text("Ketik untuk mencari di perangkat & YouTube Music", Modifier.padding(16.dp)) }
+                item {
+                    Text(
+                        "Ketik untuk mencari di perangkat & YouTube Music",
+                        color = com.zaaam.liphify.ui.theme.TextSecondary,
+                        modifier = Modifier.padding(vertical = 12.dp),
+                    )
+                }
             }
         }
     }
+    TrackSheet(
+        track = menu,
+        playlists = pls,
+        onDismiss = { menu = null },
+        onPlayNext = { player.playNext(it) },
+        onPlayLast = { player.addToQueue(it) },
+        onCreatePlaylist = { plVm.create(it) },
+        onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+    )
 }

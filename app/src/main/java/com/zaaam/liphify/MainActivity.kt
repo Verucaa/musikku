@@ -11,39 +11,50 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.zaaam.liphify.ui.browse.BrowseScreen
+import com.zaaam.liphify.ui.home.HomeScreen
 import com.zaaam.liphify.ui.library.LibraryScreen
-import com.zaaam.liphify.ui.listennow.ListenNowScreen
 import com.zaaam.liphify.ui.nav.Tab
 import com.zaaam.liphify.ui.player.MiniPlayer
 import com.zaaam.liphify.ui.player.NowPlayingScreen
 import com.zaaam.liphify.ui.player.PlaybackViewModel
 import com.zaaam.liphify.ui.search.SearchScreen
+import com.zaaam.liphify.ui.theme.Accent
 import com.zaaam.liphify.ui.theme.LiPhifyTheme
+import com.zaaam.liphify.ui.theme.TextSecondary
 import dagger.hilt.android.AndroidEntryPoint
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -66,36 +77,58 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
     val route = backStack?.destination?.route
     val pState by player.state.collectAsState()
     val snack = remember { SnackbarHostState() }
+    val hazeState = remember { HazeState() }
 
     Scaffold(
+        containerColor = Color.Black,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
-            Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
-                if (!pState.isExpanded) {
-                    MiniPlayer(
-                        state = pState,
-                        onTap = { player.setExpanded(true) },
-                        onToggle = { player.togglePlayPause() },
-                        onNext = { player.next() },
-                    )
+            Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp)) {
+                if (!pState.isExpanded && pState.current != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF2C2C2E).copy(alpha = 0.78f),
+                        modifier = Modifier.padding(bottom = 8.dp).hazeChild(state = hazeState),
+                    ) {
+                        MiniPlayer(
+                            state = pState,
+                            onTap = { player.setExpanded(true) },
+                            onToggle = { player.togglePlayPause() },
+                            onNext = { player.next() },
+                        )
+                    }
                 }
-                NavigationBar {
-                    TabItem(Tab.ListenNow, Icons.Filled.Home, route, nav)
-                    TabItem(Tab.Browse, Icons.Filled.Apps, route, nav)
-                    TabItem(Tab.Library, Icons.Filled.LibraryMusic, route, nav)
-                    IconButton(onClick = { nav.navigate("search") }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color(0xFF1C1C1E).copy(alpha = 0.78f),
+                    modifier = Modifier.hazeChild(state = hazeState),
+                ) {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TabItem(Tab.Home, Icons.Filled.Home, route, nav, Modifier.weight(1f))
+                        TabItem(Tab.New, Icons.Filled.AutoAwesome, route, nav, Modifier.weight(1f))
+                        TabItem(Tab.Library, Icons.Filled.LibraryMusic, route, nav, Modifier.weight(1f))
+                        IconButton(onClick = { nav.navigate("search") }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Filled.Search, contentDescription = "Search", tint = TextSecondary)
+                        }
                     }
                 }
             }
         },
     ) { pad ->
-        Box(Modifier.fillMaxSize().padding(pad)) {
+        Box(Modifier.fillMaxSize().padding(pad).haze(state = hazeState)) {
             NavHost(nav, startDestination = Tab.Library.route) {
-                composable(Tab.ListenNow.route) { ListenNowScreen(nav, player) }
-                composable(Tab.Browse.route) { BrowseScreen(player) }
+                composable(Tab.Home.route) { HomeScreen(player) }
+                composable(Tab.New.route) { BrowseScreen(onGenre = { nav.navigate("search?preset=$it") }) }
                 composable(Tab.Library.route) { LibraryScreen(player) }
-                composable("search") { SearchScreen(player) }
+                composable(
+                    "search?preset={preset}",
+                    arguments = listOf(navArgument("preset") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
+                    SearchScreen(preset = entry.arguments?.getString("preset") ?: "", player = player)
+                }
             }
             if (pState.isExpanded) {
                 NowPlayingScreen(state = pState, player = player, snack = snack)
@@ -110,18 +143,20 @@ private fun TabItem(
     icon: ImageVector,
     route: String?,
     nav: androidx.navigation.NavController,
+    modifier: Modifier = Modifier,
 ) {
     val selected = route == tab.route
-    IconButton(onClick = { nav.navigate(tab.route) }) {
-        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    IconButton(onClick = { nav.navigate(tab.route) }, modifier = modifier) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 icon,
                 contentDescription = tab.label,
-                tint = if (selected) com.zaaam.liphify.ui.theme.Accent else com.zaaam.liphify.ui.theme.TextSecondary,
+                tint = if (selected) Accent else TextSecondary,
             )
             Text(
                 tab.label,
-                color = if (selected) com.zaaam.liphify.ui.theme.Accent else com.zaaam.liphify.ui.theme.TextSecondary,
+                fontSize = 10.sp,
+                color = if (selected) Accent else TextSecondary,
             )
         }
     }

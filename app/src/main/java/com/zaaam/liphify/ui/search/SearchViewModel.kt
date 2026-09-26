@@ -61,6 +61,11 @@ class SearchViewModel @Inject constructor(
         _state.value = _state.value.copy(query = q)
     }
 
+    /** Preset dari tab New (genre) — hanya kalau user belum mengetik. */
+    fun setPreset(q: String) {
+        if (_state.value.query.isBlank() && q.isNotBlank()) onQuery(q)
+    }
+
     fun ytAsTrack(t: YtTrack): Track = Track(
         key = "yt:${t.videoId}",
         title = t.title,

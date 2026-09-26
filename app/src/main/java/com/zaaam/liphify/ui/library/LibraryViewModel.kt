@@ -73,6 +73,18 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    /** Auto-scan saat pertama buka kalau DB masih kosong (punya izin). */
+    fun scanIfEmpty() {
+        viewModelScope.launch {
+            if (!hasPermission()) {
+                _state.value = _state.value.copy(needsPermission = true)
+                return@launch
+            }
+            if (db.trackDao().count() == 0 && !_state.value.scanning) scan()
+            else loadFromDb()
+        }
+    }
+
     private suspend fun loadFromDb() {
         val songs = repo.localSongs()
         val dao = db.trackDao()

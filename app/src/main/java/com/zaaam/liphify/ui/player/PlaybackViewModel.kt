@@ -37,6 +37,10 @@ data class PlayerUiState(
     val error: String? = null,
     val queue: List<Track> = emptyList(),
     val showQueue: Boolean = false,
+    val controllerReady: Boolean = false,
+    val shuffleEnabled: Boolean = false,
+    /** 0=off 1=one 2=all (mirror Player.REPEAT_MODE_*) */
+    val repeatMode: Int = Player.REPEAT_MODE_OFF,
 )
 
 @HiltViewModel
@@ -51,14 +55,17 @@ class PlaybackViewModel @Inject constructor(
     private var controller: MediaController? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var ticker: Job? = null
+    /** Aksi yang datang sebelum controller tersambung — dijalankan saat connect, tidak hilang diam-diam. */
+    private val pending = mutableListOf<(MediaController) -> Unit>()
 
     init {
         connect()
         scope.launch(Dispatchers.IO) {
+            // Restore queue saja (metadata), current dibiarkan null supaya
+            // mini-player tidak nampil lagu basi yang belum di-load ke controller.
             val saved = db.queueDao().load()
             if (saved.isNotEmpty()) {
-                val tracks = saved.map { it.toTrack() }
-                _state.value = _state.value.copy(queue = tracks, current = tracks.firstOrNull())
+                _state.value = _state.value.copy(queue = saved.map { it.toTrack() })
             }
         }
     }
@@ -67,24 +74,44 @@ class PlaybackViewModel @Inject constructor(
         val token = SessionToken(context, ComponentName(context, LiPhifySessionService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
-            controller = future.get()
-            controller?.addListener(object : Player.Listener {
+            val c = future.get()
+            controller = c
+            c.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     _state.value = _state.value.copy(isPlaying = isPlaying)
                     if (isPlaying) startTicker() else ticker?.cancel()
                 }
 
                 override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                    val key = item?.mediaId
-                    val track = _state.value.queue.find { it.key == key }
+                    val track = _state.value.queue.find { it.key == item?.mediaId }
                     if (track != null) {
                         _state.value = _state.value.copy(current = track)
                         recordHistory(track)
                     }
                 }
+
+                override fun onShuffleModeEnabledChanged(enabled: Boolean) {
+                    _state.value = _state.value.copy(shuffleEnabled = enabled)
+                }
+
+                override fun onRepeatModeChanged(mode: Int) {
+                    _state.value = _state.value.copy(repeatMode = mode)
+                }
             })
-            _state.value = _state.value.copy(isPlaying = controller?.isPlaying == true)
+            _state.value = _state.value.copy(
+                isPlaying = c.isPlaying,
+                controllerReady = true,
+                shuffleEnabled = c.shuffleModeEnabled,
+                repeatMode = c.repeatMode,
+            )
+            pending.forEach { it(c) }
+            pending.clear()
         }, MoreExecutors.directExecutor())
+    }
+
+    private fun withController(block: (MediaController) -> Unit) {
+        val c = controller
+        if (c != null) block(c) else pending.add(block)
     }
 
     private fun startTicker() {
@@ -92,10 +119,10 @@ class PlaybackViewModel @Inject constructor(
         ticker = scope.launch {
             while (true) {
                 val c = controller
-                if (c != null) {
+                if (c != null && c.duration > 0) {
                     _state.value = _state.value.copy(
                         positionMs = c.currentPosition.coerceAtLeast(0),
-                        durationMs = c.duration.coerceAtLeast(0).takeIf { it > 0 } ?: _state.value.durationMs,
+                        durationMs = c.duration,
                     )
                 }
                 delay(400)
@@ -115,22 +142,19 @@ class PlaybackViewModel @Inject constructor(
         _state.value = _state.value.copy(error = null)
     }
 
-    /** Play track tunggal (ganti queue) atau tambah ke queue campur lokal+YT. */
     fun playTrack(track: Track, queue: List<Track> = listOf(track)) {
         scope.launch {
             val items = mutableListOf<MediaItem>()
             for (t in queue) {
                 val url = resolveUrl(t) ?: return@launch
-                items.add(
-                    LiPhifySessionService.buildMediaItem(
-                        t.key, t.title, t.artist, t.artwork, url,
-                    ),
-                )
+                items.add(LiPhifySessionService.buildMediaItem(t.key, t.title, t.artist, t.artwork, url))
             }
             val startIndex = queue.indexOfFirst { it.key == track.key }.coerceAtLeast(0)
-            controller?.setMediaItems(items, startIndex, 0)
-            controller?.prepare()
-            controller?.play()
+            withController { c ->
+                c.setMediaItems(items, startIndex, 0)
+                c.prepare()
+                c.play()
+            }
             _state.value = _state.value.copy(queue = queue, current = track, error = null)
             persistQueue(queue)
             recordHistory(track)
@@ -140,12 +164,13 @@ class PlaybackViewModel @Inject constructor(
     fun playNext(track: Track) {
         scope.launch {
             val url = resolveUrl(track) ?: return@launch
-            val c = controller ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
-            val idx = (c.currentMediaItemIndex + 1).coerceAtLeast(0)
-            c.addMediaItem(idx, item)
+            withController { c ->
+                val idx = (c.currentMediaItemIndex + 1).coerceAtLeast(0)
+                c.addMediaItem(idx, item)
+            }
             val q = _state.value.queue.toMutableList()
-            q.add(idx.coerceAtMost(q.size), track)
+            q.add((_state.value.queue.indexOf(_state.value.current) + 1).coerceIn(0, q.size), track)
             _state.value = _state.value.copy(queue = q)
             persistQueue(q)
         }
@@ -155,7 +180,7 @@ class PlaybackViewModel @Inject constructor(
         scope.launch {
             val url = resolveUrl(track) ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
-            controller?.addMediaItem(item)
+            withController { c -> c.addMediaItem(item) }
             val q = _state.value.queue + track
             _state.value = _state.value.copy(queue = q)
             persistQueue(q)
@@ -163,34 +188,22 @@ class PlaybackViewModel @Inject constructor(
     }
 
     fun moveQueue(from: Int, to: Int) {
-        controller?.moveMediaItem(from, to)
-        val q = _state.value.queue.toMutableList()
-        if (from in q.indices && to in q.indices) {
-            val t = q.removeAt(from)
-            q.add(to, t)
-            _state.value = _state.value.copy(queue = q)
-            scope.launch(Dispatchers.IO) { persistQueue(q) }
-        }
+        val q = _state.value.queue
+        if (from !in q.indices || to !in q.indices) return
+        withController { c -> c.moveMediaItem(from, to) }
+        val next = q.toMutableList()
+        val t = next.removeAt(from)
+        next.add(to, t)
+        _state.value = _state.value.copy(queue = next)
+        scope.launch(Dispatchers.IO) { persistQueue(next) }
     }
 
-    fun togglePlayPause() {
-        val c = controller ?: return
-        if (c.isPlaying) c.pause() else c.play()
-    }
-
-    fun next() = scope.launch { controller?.seekToNext() }
-    fun prev() = scope.launch { controller?.seekToPrevious() }
-    fun seekTo(ms: Long) = scope.launch { controller?.seekTo(ms) }
-    fun toggleShuffle() = scope.launch { controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
-    fun cycleRepeat() = scope.launch {
-        controller?.let {
-            it.repeatMode = when (it.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                else -> Player.REPEAT_MODE_OFF
-            }
-        }
-    }
+    fun togglePlayPause() = withController { c -> if (c.isPlaying) c.pause() else c.play() }
+    fun next() = withController { c -> c.seekToNext() }
+    fun prev() = withController { c -> c.seekToPrevious() }
+    fun seekTo(ms: Long) = withController { c -> c.seekTo(ms) }
+    fun setShuffle(v: Boolean) = withController { c -> c.shuffleModeEnabled = v }
+    fun setRepeat(mode: Int) = withController { c -> c.repeatMode = mode }
 
     /** Lazy resolve: lokal = contentUri langsung; YT = re-resolve tiap mau play (URL expired). */
     private suspend fun resolveUrl(t: Track): String? {

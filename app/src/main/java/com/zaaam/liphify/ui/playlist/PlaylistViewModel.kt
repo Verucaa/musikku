@@ -48,6 +48,23 @@ class PlaylistViewModel @Inject constructor(
             db.playlistDao().putTrack(
                 PlaylistTrackEntity(playlistId, pos, track.key, track.title, track.artist, track.artwork, source, localUri, videoId),
             )
+            refresh()
+        }
+    }
+
+    suspend fun tracksOf(id: Long) = db.playlistDao().tracks(id)
+
+    fun removeTrack(playlistId: Long, pos: Int) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            db.playlistDao().removeTrack(playlistId, pos)
+            refresh()
+        }
+    }
+
+    fun deletePlaylist(id: Long) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            db.playlistDao().delete(id)
+            refresh()
         }
     }
 }
