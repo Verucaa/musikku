@@ -122,12 +122,16 @@ fun SearchScreen(
             if (s.query.isBlank()) {
                 if (recent.isNotEmpty()) {
                     item { Text("Recent Searches", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
-                    items(recent, key = { "r:$it" }) { q ->
-                        Text(
-                            q,
-                            Modifier.fillMaxWidth().clickable { vm.onQuery(q) }.padding(vertical = 10.dp),
-                            fontSize = 16.sp,
-                        )
+                    item {
+                        Column {
+                            recent.forEach { q ->
+                                Text(
+                                    q,
+                                    Modifier.fillMaxWidth().clickable { vm.onQuery(q) }.padding(vertical = 10.dp),
+                                    fontSize = 16.sp,
+                                )
+                            }
+                        }
                     }
                 }
                 item { Text("Browse Categories", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
