@@ -67,12 +67,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Media3 — satu BOM untuk semua modul media3-*
-    implementation(platform("androidx.media3:media3-bom:1.9.0"))
-    implementation("androidx.media3:media3-exoplayer")
-    implementation("androidx.media3:media3-session")
-    implementation("androidx.media3:media3-ui")
-    implementation("androidx.media3:media3-common")
+    // Media3 — pin eksplisit per modul (BOM dihindari; lihat 03_VERSION_MATRIX: target 1.9.0)
+    implementation("androidx.media3:media3-exoplayer:1.9.0")
+    implementation("androidx.media3:media3-session:1.9.0")
+    implementation("androidx.media3:media3-ui:1.9.0")
+    implementation("androidx.media3:media3-common:1.9.0")
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
