@@ -35,7 +35,7 @@ jobs:
             APK=$(ls app/build/outputs/apk/release/*-unsigned.apk 2>/dev/null || ls app/build/outputs/apk/release/*.apk | head -1)
             echo "Signing $APK"
             $ANDROID_HOME/build-tools/35.0.0/apksigner sign --ks /tmp/release.jks \
-              --ks-pass:env KEYSTORE_PASSWORD --key-pass:env KEY_PASSWORD \
+              --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" \
               --out app/build/outputs/apk/release/LiPhify-release-signed.apk "$APK"
             rm /tmp/release.jks
           else
