@@ -1,0 +1,94 @@
+package com.zaaam.liphify.ui.library
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
+import com.zaaam.liphify.data.local.AppDatabase
+import com.zaaam.liphify.data.local.MediaStoreScanner
+import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.data.repository.MusicRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import android.content.Context
+
+data class LibraryUiState(
+    val songs: List<Track> = emptyList(),
+    val songCount: Int = 0,
+    val artists: List<String> = emptyList(),
+    val albums: List<String> = emptyList(),
+    val recentlyAdded: List<Track> = emptyList(),
+    val playlistNames: List<Pair<Long, String>> = emptyList(),
+    val needsPermission: Boolean = false,
+    val scanning: Boolean = false,
+)
+
+@HiltViewModel
+class LibraryViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val db: AppDatabase,
+    private val scanner: MediaStoreScanner,
+    private val repo: MusicRepository,
+) : androidx.lifecycle.ViewModel() {
+    private val _state = MutableStateFlow(LibraryUiState())
+    val state: StateFlow<LibraryUiState> = _state
+
+    init {
+        refresh()
+    }
+
+    fun hasPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= 33) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun refresh() {
+        viewModelScope2().launch {
+            if (!hasPermission()) {
+                _state.value = _state.value.copy(needsPermission = true)
+                return@launch
+            }
+            loadFromDb()
+        }
+    }
+
+    fun scan() {
+        viewModelScope2().launch {
+            _state.value = _state.value.copy(scanning = true, needsPermission = false)
+            try {
+                scanner.scan()
+            } catch (_: Exception) {
+            }
+            loadFromDb()
+            _state.value = _state.value.copy(scanning = false)
+        }
+    }
+
+    private suspend fun loadFromDb() {
+        val songs = repo.localSongs()
+        val dao = db.trackDao()
+        _state.value = LibraryUiState(
+            songs = songs,
+            songCount = songs.size,
+            artists = dao.artists(),
+            albums = dao.albums(),
+            recentlyAdded = dao.recentlyAdded(10).map { e ->
+                repo.localSongs().find { it.key == "local:${e.mediaId}" } ?: return@map null
+            }.filterNotNull(),
+            playlistNames = db.playlistDao().playlists().map { it.id to it.name },
+            needsPermission = false,
+            scanning = false,
+        )
+    }
+
+    private fun viewModelScope2() = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main,
+    )
+}
