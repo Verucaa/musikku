@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -112,10 +111,18 @@ private fun TabItem(
     route: String?,
     nav: androidx.navigation.NavController,
 ) {
-    NavigationBarItem(
-        selected = route == tab.route,
-        onClick = { nav.navigate(tab.route) },
-        icon = { Icon(icon, contentDescription = tab.label) },
-        label = { Text(tab.label) },
-    )
+    val selected = route == tab.route
+    IconButton(onClick = { nav.navigate(tab.route) }) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+            Icon(
+                icon,
+                contentDescription = tab.label,
+                tint = if (selected) com.zaaam.liphify.ui.theme.Accent else com.zaaam.liphify.ui.theme.TextSecondary,
+            )
+            Text(
+                tab.label,
+                color = if (selected) com.zaaam.liphify.ui.theme.Accent else com.zaaam.liphify.ui.theme.TextSecondary,
+            )
+        }
+    }
 }
