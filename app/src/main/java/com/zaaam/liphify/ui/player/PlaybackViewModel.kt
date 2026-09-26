@@ -63,6 +63,19 @@ class PlaybackViewModel @Inject constructor(
     private val pending = mutableListOf<(MediaController) -> Unit>()
     private var connectAttempts = 0
 
+    private fun withController(block: (MediaController) -> Unit) {
+        val c = controller
+        if (c != null) {
+            try {
+                block(c)
+            } catch (e: Exception) {
+                Log.w("LiPhifyPlayer", "controller call gagal", e)
+            }
+        } else {
+            pending.add(block)
+        }
+    }
+
     init {
         connect()
         scope.launch(Dispatchers.IO) {

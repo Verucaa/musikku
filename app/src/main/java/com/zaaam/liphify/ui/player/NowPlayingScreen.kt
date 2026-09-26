@@ -135,7 +135,7 @@ fun NowPlayingScreen(
                 Text(cur.artist, fontSize = 19.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
 
                 // Seekbar real: drag preview + seekTo saat dilepas.
-                var drag by remember(cur.key) { mutableStateOf<Float?>(null) }
+                var drag: Float? by remember(cur.key) { mutableStateOf(null) }
                 val duration = state.durationMs.coerceAtLeast(1)
                 Slider(
                     value = drag ?: state.positionMs.toFloat().coerceIn(0f, duration.toFloat()),
