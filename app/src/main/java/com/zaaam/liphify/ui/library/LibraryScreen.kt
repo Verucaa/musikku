@@ -227,16 +227,9 @@ fun LibraryScreen(
 private fun CatRow(icon: String, label: String, count: Int, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(30.dp).clip(RoundedCornerShape(7.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(com.zaaam.liphify.ui.theme.Accent, Color(0xFFC40E2B)),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) { Text(icon) }
-            Text(label, Modifier.padding(start = 12.dp).weight(1f), fontSize = 17.sp)
+            // Glyph pink polos ala Apple Music (tanpa kotak).
+            Text(icon, fontSize = 22.sp, modifier = Modifier.width(34.dp))
+            Text(label, Modifier.weight(1f), fontSize = 17.sp)
             Text("›", color = com.zaaam.liphify.ui.theme.TextHint, fontSize = 20.sp)
         }
         HorizontalDivider(color = com.zaaam.liphify.ui.theme.Divider)

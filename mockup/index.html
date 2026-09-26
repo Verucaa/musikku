@@ -23,7 +23,7 @@
   /* library category rows ala Apple Music */
   .cat{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--div);cursor:pointer;font-size:17px}
   .cat:active{background:var(--card)}
-  .glyph{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#FA233B,#c40e2b);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .cat .g{font-size:22px;width:34px;flex-shrink:0}
   .cat .chev{margin-left:auto;color:var(--t3)}
   /* horizontal cards */
   .hscroll{display:flex;gap:12px;overflow-x:auto;padding:4px 0 8px}
@@ -73,7 +73,7 @@
   #npBg{position:absolute;inset:0;z-index:-1;overflow:hidden;background:#111}
   #npBg img{width:100%;height:100%;object-fit:cover;filter:blur(60px) brightness(.55);transform:scale(1.2)}
   .np-top{display:flex;justify-content:space-between;align-items:center;color:#fff}
-  #npArt{width:min(78vw,320px);aspect-ratio:1;border-radius:12px;margin:18px auto 16px;object-fit:cover;display:block;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  #npArt{width:100%;aspect-ratio:1;object-fit:cover;display:block;margin:6px 0 0}
   .np-titlerow{display:flex;align-items:center;gap:10px}
   .np-titlerow .meta .t{font-size:20px;font-weight:600}
   .np-titlerow .meta .a{font-size:19px}
@@ -138,6 +138,7 @@
     <img id="npArt" alt="">
     <div class="np-titlerow">
       <div class="meta"><div class="t" id="npTitle">–</div><div class="a" id="npArtist">–</div></div>
+      <button class="iconbtn" id="favBtn" onclick="toggleFav()">☆</button>
       <button class="dots" onclick="openSheet(curIdx())">⋯</button>
     </div>
     <div style="margin-top:10px">
@@ -159,7 +160,7 @@
     </div>
     <div id="up">
       <div class="grab"></div>
-      <h2 class="sec" style="margin-top:0">Playing Next</h2>
+      <div style="display:flex;align-items:center"><h2 class="sec" style="margin-top:0;flex:1">Playing Next</h2><button class="iconbtn" style="font-size:15px;color:var(--acc)" onclick="queue=[];qi=0;playing=false;syncMini();renderUp()">Clear</button></div>
       <div class="sr-row">
         <button id="shBtn" onclick="toggleSh()">🔀 Shuffle Off</button>
         <button id="rpBtn" onclick="cycleRp()">🔁 Repeat Off</button>
@@ -221,7 +222,7 @@ function renderLibrary(){
   const arts=[...new Set(SONGS.map(s=>s.a))],albs=[...new Set(SONGS.map(s=>s.al))];
   const cats=[["🎧","Playlists",playlists.length],["🎤","Artists",arts.length],["💿","Albums",albs.length],["🎵","Songs",SONGS.length],["⬇","Downloaded",0]];
   $("screen").innerHTML=`<section>
-    ${cats.map(c=>`<div class="cat" onclick="toast('${c[1]} (${c[2]}) — mockup')"><div class="glyph">${c[0]}</div>${c[1]}<span class="chev">›</span></div>`).join("")}
+    ${cats.map(c=>`<div class="cat" onclick="toast('${c[1]} (${c[2]}) — mockup')"><span class="g">${c[0]}</span>${c[1]}<span class="chev">›</span></div>`).join("")}
     <h2 class="sec">Recently Added</h2><div class="sub">ORDER BY dateAdded DESC di app final</div>
     <div class="hscroll">${[4,1,5,0].map(hcard).join("")}</div>
     <h2 class="sec">Songs • ${SONGS.length}</h2>
@@ -280,12 +281,25 @@ function seekTo(v){if(cur()===undefined)return;pos=v/100*cur().d;syncNP();}
 setInterval(()=>{if(playing&&cur()!==undefined){pos+=1;if(pos>=cur().d){if(rp===1){pos=0;}else next();}syncMini();if($("np").classList.contains("open"))syncNP();}},1000);
 function openNP(){if(cur()===undefined)return;toggleUp(false);$("np").classList.add("open");syncNP();}
 function closeNP(){$("np").classList.remove("open");}
+let favs = new Set();
+function toggleFav(){
+  const s = cur(); if(!s) return;
+  const k = SONGS.indexOf(s);
+  if(favs.has(k)){ favs.delete(k); } else { favs.add(k); toast("→ Favorit ✓"); }
+  syncFav();
+}
+function syncFav(){
+  const s = cur(); if(!s) return;
+  $("favBtn").textContent = favs.has(SONGS.indexOf(s)) ? "★" : "☆";
+  $("favBtn").style.color = favs.has(SONGS.indexOf(s)) ? "var(--acc)" : "#fff";
+}
 function syncNP(){
   const s=cur();if(s===undefined)return;
   $("npTitle").textContent=s.t;$("npArtist").textContent=s.a;
   $("npArt").src=cover(s);$("npBgImg").src=cover(s);
   $("dur").textContent="−"+fmt(Math.max(0,s.d-pos));$("pos").textContent=fmt(pos);
   $("seek").value=s.d?pos/s.d*100:0;$("ppBtn").textContent=playing?"⏸":"▶";
+  syncFav();
   renderUp();
 }
 function toggleUp(open){
@@ -294,7 +308,8 @@ function toggleUp(open){
 }
 function renderUp(){
   $("upList").innerHTML=queue.map((idx,k)=>{const s=SONGS[idx];
-    return `<div class="row" style="${k===qi?"color:var(--acc)":""}" onclick="qi=${k};pos=0;playing=true;syncMini();syncNP()"><img class="cv" src="${cover(s)}"><div class="meta"><div class="t">${s.t}</div><div class="a">${s.a}</div></div><button class="dots" onclick="event.stopPropagation();mvUp(${k},-1)">↑</button><button class="dots" onclick="event.stopPropagation();mvUp(${k},1)">↓</button></div>`;}).join("");
+    return `<div class="row" style="${k===qi?"color:var(--acc)":""}" onclick="qi=${k};pos=0;playing=true;syncMini();syncNP()"><img class="cv" src="${cover(s)}"><div class="meta"><div class="t">${s.t}</div><div class="a">${s.a}</div></div><button class="dots" onclick="event.stopPropagation();mvUp(${k},-1)">↑</button><button class="dots" onclick="event.stopPropagation();mvUp(${k},1)">↓</button></div>`;}).join("")
+    +`<div class="row" onclick="closeNP();toggleUp(false);go('search')"><div class="meta"><div class="t">＋&nbsp;&nbsp;Add Songs</div></div></div>`;
 }
 function mvUp(k,d){const j=k+d;if(j<0||j>=queue.length)return;[queue[k],queue[j]]=[queue[j],queue[k]];if(qi===k)qi=j;else if(qi===j)qi=k;renderUp();syncMini();}
 /* action sheet ala iOS */

@@ -321,6 +321,19 @@ class PlaybackViewModel @Inject constructor(
     fun setShuffle(v: Boolean) = withController { c -> c.shuffleModeEnabled = v }
     fun setRepeat(mode: Int) = withController { c -> c.repeatMode = mode }
 
+    /** Kosongkan queue (UI + controller), ala tombol Clear Apple Music. */
+    fun clearQueue() {
+        withController { c -> c.clearMediaItems() }
+        _state.value = _state.value.copy(queue = emptyList(), current = null, isPlaying = false)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                db.queueDao().clear()
+            } catch (e: Exception) {
+                Log.w("LiPhifyPlayer", "clear queue gagal", e)
+            }
+        }
+    }
+
     /** Lazy resolve: lokal = contentUri langsung; YT = re-resolve tiap mau play (URL expired). */
     private suspend fun resolveUrl(t: Track): String? {
         return when (val s = t.source) {

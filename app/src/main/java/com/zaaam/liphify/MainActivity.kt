@@ -184,7 +184,19 @@ fun LiPhifyScaffold(
                 player.setExpanded(false)
             }
             if (pState.isExpanded) {
-                NowPlayingScreen(state = pState, player = player, snack = snack, plVm = playlistVm)
+                NowPlayingScreen(
+                    state = pState,
+                    player = player,
+                    snack = snack,
+                    plVm = playlistVm,
+                    onAddSongs = {
+                        player.setExpanded(false)
+                        nav.navigate("search") {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         }
     }

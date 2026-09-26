@@ -4,14 +4,15 @@ import android.media.AudioManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -60,12 +59,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
+import com.zaaam.liphify.ui.common.Artwork
+import com.zaaam.liphify.ui.theme.Accent
 import kotlinx.coroutines.launch
 
 /**
- * PRD-005: Now Playing full-screen ala Apple Music.
- * Background = artwork yang di-blur (fallback gradient netral), seekbar real,
- * volume real via AudioManager, Shuffle/Repeat di panel queue (PRD-008).
+ * PRD-005: Now Playing full-screen meniru Apple Music dari screenshot resmi:
+ * artwork full-bleed atas + drag handle, judul + bintang + ⋯, progress,
+ * kontrol besar, volume, baris bawah (lirik disabled jujur / output / queue).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,12 +75,15 @@ fun NowPlayingScreen(
     player: PlaybackViewModel,
     snack: SnackbarHostState,
     plVm: com.zaaam.liphify.ui.playlist.PlaylistViewModel,
+    onAddSongs: () -> Unit,
 ) {
     val cur = state.current
     val ctx = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var menu by remember { mutableStateOf<com.zaaam.liphify.domain.model.Track?>(null) }
     val pls by plVm.playlists.collectAsState()
+    val favKeys by plVm.favoritKeys.collectAsState()
+    val isFav = cur != null && favKeys.contains(cur.key)
 
     LaunchedEffect(state.error) {
         if (state.error != null) {
@@ -98,62 +102,83 @@ fun NowPlayingScreen(
             AsyncImage(
                 model = cur.artwork,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().blur(60.dp).graphicsLayer { scaleX = 1.25f; scaleY = 1.25f },
+                modifier = Modifier.fillMaxSize().blur(40.dp).graphicsLayer { scaleX = 1.25f; scaleY = 1.25f },
             )
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
         }
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxSize()) {
+            // Drag handle ala Apple + tombol tutup.
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { player.setExpanded(false) }) {
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Tutup")
                 }
                 Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier.width(36.dp).height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.35f)),
+                )
+                Spacer(Modifier.weight(1f))
                 IconButton(onClick = { if (cur != null) menu = cur }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Opsi")
+                    Text("⋯", fontSize = 20.sp)
                 }
             }
             if (cur != null) {
-                Spacer(Modifier.height(8.dp))
+                // Artwork full-bleed (tanpa kartu) seperti Apple Music.
                 if (cur.artwork != null) {
                     AsyncImage(
                         model = cur.artwork,
                         contentDescription = null,
-                        modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally).clip(RoundedCornerShape(12.dp)),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 20.dp),
                     )
                 } else {
-                    Card(
-                        Modifier.size(300.dp).align(Alignment.CenterHorizontally),
-                        shape = RoundedCornerShape(12.dp),
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 20.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0x2E000000)),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box(Modifier.fillMaxSize().background(Color(0x2E000000)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(72.dp))
-                        }
+                        Icon(Icons.Filled.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(72.dp))
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                Text(cur.title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
-                Text(cur.artist, fontSize = 19.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(cur.title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
+                        Text(cur.artist, fontSize = 19.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
+                    }
+                    TextButton(onClick = { player.let { plVm.toggleFavorite(cur) } }) {
+                        Text(if (isFav) "★" else "☆", fontSize = 24.sp, color = if (isFav) Accent else Color.White.copy(alpha = 0.8f))
+                    }
+                    TextButton(onClick = { menu = cur }) {
+                        Text("⋯", fontSize = 20.sp, color = Color.White.copy(alpha = 0.8f))
+                    }
+                }
 
                 // Seekbar real: drag preview + seekTo saat dilepas.
                 var drag: Float? by remember(cur.key) { mutableStateOf(null) }
                 val duration = state.durationMs.coerceAtLeast(1)
-                Slider(
-                    value = drag ?: state.positionMs.toFloat().coerceIn(0f, duration.toFloat()),
-                    onValueChange = { drag = it },
-                    valueRange = 0f..duration.toFloat(),
-                    onValueChangeFinished = {
-                        drag?.let { player.seekTo(it.toLong()) }
-                        drag = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(Modifier.fillMaxWidth()) {
-                    Text(fmtMs(drag?.toLong() ?: state.positionMs), fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
-                    Spacer(Modifier.weight(1f))
-                    Text("−" + fmtMs((duration - (drag?.toLong() ?: state.positionMs)).coerceAtLeast(0)), fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                Column(Modifier.padding(horizontal = 20.dp)) {
+                    Slider(
+                        value = drag ?: state.positionMs.toFloat().coerceIn(0f, duration.toFloat()),
+                        onValueChange = { drag = it },
+                        valueRange = 0f..duration.toFloat(),
+                        onValueChangeFinished = {
+                            drag?.let { player.seekTo(it.toLong()) }
+                            drag = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(fmtMs(drag?.toLong() ?: state.positionMs), fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                        Spacer(Modifier.weight(1f))
+                        Text("−" + fmtMs((duration - (drag?.toLong() ?: state.positionMs)).coerceAtLeast(0)), fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                    }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(24.dp))
+                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(16.dp))
                     IconButton(onClick = { player.prev() }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.SkipPrevious, contentDescription = "Prev", modifier = Modifier.size(38.dp))
                     }
@@ -167,7 +192,7 @@ fun NowPlayingScreen(
                     IconButton(onClick = { player.next() }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.SkipNext, contentDescription = "Next", modifier = Modifier.size(38.dp))
                     }
-                    Spacer(Modifier.width(24.dp))
+                    Spacer(Modifier.width(16.dp))
                 }
                 // Volume real via AudioManager.
                 val am = remember { ctx.getSystemService(AudioManager::class.java) }
@@ -177,7 +202,7 @@ fun NowPlayingScreen(
                         am.getStreamVolume(AudioManager.STREAM_MUSIC).coerceIn(0, max).toFloat(),
                     )
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.VolumeDown, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                     var volDrag: Float? by remember { mutableStateOf(null) }
                     Slider(
@@ -195,7 +220,7 @@ fun NowPlayingScreen(
                     )
                     Icon(Icons.Filled.VolumeUp, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Spacer(Modifier.weight(1f))
                     // PRD-101 masih P1: disabled jujur.
                     TextButton(onClick = {}, enabled = false) { Text("💬", color = Color.White.copy(alpha = 0.35f)) }
@@ -216,10 +241,10 @@ fun NowPlayingScreen(
                     Spacer(Modifier.weight(1f))
                 }
                 if (state.showQueue) {
-                    QueuePanel(state = state, player = player)
+                    QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
                 }
             } else {
-                Text("Tidak ada lagu. Pilih dari Library atau Search.")
+                Text("Tidak ada lagu. Pilih dari Library atau Search.", Modifier.padding(20.dp))
             }
         }
         com.zaaam.liphify.ui.common.TrackSheet(
@@ -234,63 +259,112 @@ fun NowPlayingScreen(
     }
 }
 
-/** Panel Up Next: Shuffle/Repeat di header ala Apple Music + reorder real. */
+/**
+ * Panel Up Next meniru Apple Music: header lagu berjalan + pil
+ * Shuffle/Repeat + "Playing Next" + Clear + baris ber-cover + Add Songs.
+ */
 @Composable
-private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
-    Column(Modifier.fillMaxWidth()) {
-    Text("Playing Next", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        TextButton(
-            onClick = { player.setShuffle(!state.shuffleEnabled) },
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(if (state.shuffleEnabled) "🔀 Shuffle On" else "🔀 Shuffle Off")
-        }
-        val rpLabel = when (state.repeatMode) {
-            Player.REPEAT_MODE_ONE -> "🔂 Repeat One"
-            Player.REPEAT_MODE_ALL -> "🔁 Repeat All"
-            else -> "🔁 Repeat Off"
-        }
-        TextButton(
-            onClick = {
-                player.setRepeat(
-                    when (state.repeatMode) {
-                        Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                        Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                        else -> Player.REPEAT_MODE_OFF
-                    },
-                )
-            },
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(rpLabel)
-        }
-    }
-    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
-        itemsIndexed(state.queue, key = { idx, t -> "$idx:${t.key.hashCode()}" }) { idx, t ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                com.zaaam.liphify.ui.common.Artwork(model = t.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
+private fun QueuePanel(
+    state: PlayerUiState,
+    player: PlaybackViewModel,
+    curKey: String,
+    onAddSongs: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Box(
+            Modifier.width(36.dp).height(5.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color.White.copy(alpha = 0.35f))
+                .align(Alignment.CenterHorizontally),
+        )
+        val cur = state.queue.find { it.key == curKey }
+        if (cur != null) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Artwork(model = cur.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                    Text(
-                        t.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = if (t.key == state.current?.key) com.zaaam.liphify.ui.theme.Accent else Color.White,
-                    )
-                    Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
-                }
-                IconButton(onClick = { player.moveQueue(idx, idx - 1) }, enabled = idx > 0) {
-                    Icon(Icons.Filled.ArrowUpward, contentDescription = "Naik")
-                }
-                IconButton(onClick = { player.moveQueue(idx, idx + 1) }, enabled = idx < state.queue.size - 1) {
-                    Icon(Icons.Filled.ArrowDownward, contentDescription = "Turun")
+                    Text(cur.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                    Text(cur.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
                 }
             }
         }
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            QueuePill(
+                label = if (state.shuffleEnabled) "🔀 Shuffle On" else "🔀 Shuffle",
+                on = state.shuffleEnabled,
+                modifier = Modifier.weight(1f),
+                onClick = { player.setShuffle(!state.shuffleEnabled) },
+            )
+            Spacer(Modifier.width(8.dp))
+            val rpLabel = when (state.repeatMode) {
+                Player.REPEAT_MODE_ONE -> "🔂 Repeat 1"
+                Player.REPEAT_MODE_ALL -> "🔁 Repeat"
+                else -> "🔁 Repeat"
+            }
+            QueuePill(
+                label = rpLabel,
+                on = state.repeatMode != Player.REPEAT_MODE_OFF,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    player.setRepeat(
+                        when (state.repeatMode) {
+                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                            else -> Player.REPEAT_MODE_OFF
+                        },
+                    )
+                },
+            )
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Playing Next", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            TextButton(onClick = { player.clearQueue() }) { Text("Clear") }
+        }
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
+            itemsIndexed(state.queue, key = { idx, t -> "$idx:${t.key.hashCode()}" }) { idx, t ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Artwork(model = t.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
+                    Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                        Text(
+                            t.title,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = if (t.key == curKey) Accent else Color.White,
+                        )
+                        Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                    }
+                    IconButton(onClick = { player.moveQueue(idx, idx - 1) }, enabled = idx > 0) {
+                        Icon(Icons.Filled.ArrowUpward, contentDescription = "Naik")
+                    }
+                    IconButton(onClick = { player.moveQueue(idx, idx + 1) }, enabled = idx < state.queue.size - 1) {
+                        Icon(Icons.Filled.ArrowDownward, contentDescription = "Turun")
+                    }
+                }
+            }
+            item {
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onAddSongs).padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("＋", fontSize = 22.sp, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(end = 12.dp))
+                    Text("Add Songs", fontSize = 16.sp)
+                }
+            }
+        }
+        TextButton(onClick = { player.toggleQueue(false) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Tutup")
+        }
     }
-    TextButton(onClick = { player.toggleQueue(false) }, modifier = Modifier.fillMaxWidth()) {
-        Text("Tutup")
-    }
+}
+
+@Composable
+private fun QueuePill(label: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (on) Accent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.12f)),
+    ) {
+        Text(label, fontSize = 13.sp, color = Color.White)
     }
 }
 
