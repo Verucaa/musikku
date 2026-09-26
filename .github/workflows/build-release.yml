@@ -20,7 +20,7 @@ jobs:
       - name: Accept SDK licenses + install platform
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
       - name: Build release APK
         run: gradle :app:assembleRelease --stacktrace
       - name: Sign APK (jika secrets tersedia)
@@ -34,7 +34,7 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > /tmp/release.jks
             APK=$(ls app/build/outputs/apk/release/*-unsigned.apk 2>/dev/null || ls app/build/outputs/apk/release/*.apk | head -1)
             echo "Signing $APK"
-            $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks /tmp/release.jks \
+            $ANDROID_HOME/build-tools/35.0.0/apksigner sign --ks /tmp/release.jks \
               --ks-pass:env KEYSTORE_PASSWORD --key-pass:env KEY_PASSWORD \
               --out app/build/outputs/apk/release/LiPhify-release-signed.apk "$APK"
             rm /tmp/release.jks
