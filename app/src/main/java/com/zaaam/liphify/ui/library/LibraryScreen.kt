@@ -172,9 +172,10 @@ fun LibraryScreen(
                             }
                             TextButton(onClick = { vm.scan() }) { Text(if (state.scanning) "Memindai…" else "Refresh") }
                         }
-                        if (state.scanError != null) {
+                        val scanErr = state.scanError
+                        if (scanErr != null) {
                             Text(
-                                state.scanError,
+                                scanErr,
                                 fontSize = 12.sp,
                                 color = Color(0xFFFF9D9D),
                                 modifier = Modifier.padding(bottom = 4.dp),
