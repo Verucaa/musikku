@@ -197,6 +197,7 @@ fun NowPlayingScreen(state: PlayerUiState, player: PlaybackViewModel, snack: Sna
 /** Panel Up Next: Shuffle/Repeat di header ala Apple Music + reorder real. */
 @Composable
 private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
+    Column(Modifier.fillMaxWidth().weight(1f)) {
     Text("Playing Next", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         TextButton(
@@ -245,6 +246,7 @@ private fun QueuePanel(state: PlayerUiState, player: PlaybackViewModel) {
                 }
             }
         }
+    }
     }
 }
 
