@@ -53,6 +53,7 @@ import com.zaaam.liphify.ui.theme.Accent
 import com.zaaam.liphify.ui.theme.LiPhifyTheme
 import com.zaaam.liphify.ui.theme.TextSecondary
 import dagger.hilt.android.AndroidEntryPoint
+import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
@@ -89,7 +90,13 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = Color(0xFF2C2C2E).copy(alpha = 0.78f),
-                        modifier = Modifier.padding(bottom = 8.dp).hazeChild(state = hazeState),
+                        modifier = Modifier.padding(bottom = 8.dp).hazeChild(
+                            state = hazeState,
+                            style = HazeDefaults.style(
+                                backgroundColor = Color(0xFF2C2C2E).copy(alpha = 0.78f),
+                                blurRadius = 24.dp,
+                            ),
+                        ),
                     ) {
                         MiniPlayer(
                             state = pState,
@@ -102,7 +109,13 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
                 Surface(
                     shape = RoundedCornerShape(26.dp),
                     color = Color(0xFF1C1C1E).copy(alpha = 0.78f),
-                    modifier = Modifier.hazeChild(state = hazeState),
+                    modifier = Modifier.hazeChild(
+                        state = hazeState,
+                        style = HazeDefaults.style(
+                            backgroundColor = Color(0xFF1C1C1E).copy(alpha = 0.78f),
+                            blurRadius = 24.dp,
+                        ),
+                    ),
                 ) {
                     androidx.compose.foundation.layout.Row(
                         Modifier.fillMaxWidth().padding(vertical = 6.dp),
