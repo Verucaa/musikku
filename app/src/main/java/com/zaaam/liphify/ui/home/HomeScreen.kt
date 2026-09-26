@@ -45,9 +45,9 @@ import com.zaaam.liphify.ui.theme.TextSecondary
 @Composable
 fun HomeScreen(
     player: PlaybackViewModel,
+    libVm: LibraryViewModel,
     vm: HomeViewModel = hiltViewModel(),
     plVm: PlaylistViewModel = hiltViewModel(),
-    libVm: LibraryViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
@@ -58,6 +58,8 @@ fun HomeScreen(
         libVm.scanIfEmpty(); vm.refresh()
     }
     LaunchedEffect(Unit) { vm.refresh() }
+    // Scan selesai di tab mana pun (songCount berubah) -> Home ikut refresh.
+    LaunchedEffect(lib.songCount) { vm.refresh() }
 
     LazyColumn(Modifier.fillMaxSize()) {
         item { LargeTitle("Home") }

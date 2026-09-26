@@ -69,13 +69,18 @@ fun SearchScreen(
     val ctx = LocalContext.current
     var recent by remember { mutableStateOf(listOf<String>()) }
     LaunchedEffect(preset) { vm.setPreset(preset) }
+    LaunchedEffect(Unit) { recent = RecentQueries.load(ctx) }
     LaunchedEffect(s.query) {
-        if (s.query.isNotBlank()) {
-            RecentQueries.save(ctx, s.query.trim())
-            recent = RecentQueries.load(ctx)
+        val q = s.query.trim()
+        if (q.length >= 2) {
+            kotlinx.coroutines.delay(800)
+            // Simpan hanya kalau user berhenti mengetik (bukan tiap keystroke).
+            if (q == s.query.trim()) {
+                RecentQueries.save(ctx, q)
+                recent = RecentQueries.load(ctx)
+            }
         }
     }
-    LaunchedEffect(Unit) { recent = RecentQueries.load(ctx) }
 
     Column(Modifier.fillMaxSize()) {
         LargeTitle("Search")
@@ -117,10 +122,10 @@ fun SearchScreen(
             if (s.query.isBlank()) {
                 if (recent.isNotEmpty()) {
                     item { Text("Recent Searches", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp)) }
-                    items(recent.size, key = { "r:$it" }) { i ->
+                    items(recent, key = { "r:$it" }) { q ->
                         Text(
-                            recent[i],
-                            Modifier.fillMaxWidth().clickable { vm.onQuery(recent[i]) }.padding(vertical = 10.dp),
+                            q,
+                            Modifier.fillMaxWidth().clickable { vm.onQuery(q) }.padding(vertical = 10.dp),
                             fontSize = 16.sp,
                         )
                     }

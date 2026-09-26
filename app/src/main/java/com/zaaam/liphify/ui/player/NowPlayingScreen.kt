@@ -171,8 +171,12 @@ fun NowPlayingScreen(
                 }
                 // Volume real via AudioManager.
                 val am = remember { ctx.getSystemService(AudioManager::class.java) }
-                val max = remember { am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
-                var vol by remember { mutableFloatStateOf(am.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()) }
+                val max = remember { am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1) }
+                var vol by remember {
+                    mutableFloatStateOf(
+                        am.getStreamVolume(AudioManager.STREAM_MUSIC).coerceIn(0, max).toFloat(),
+                    )
+                }
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.VolumeDown, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                     Slider(

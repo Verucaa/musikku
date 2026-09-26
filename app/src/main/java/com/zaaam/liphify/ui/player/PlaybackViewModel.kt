@@ -2,7 +2,10 @@ package com.zaaam.liphify.ui.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -26,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 data class PlayerUiState(
@@ -57,73 +61,109 @@ class PlaybackViewModel @Inject constructor(
     private var ticker: Job? = null
     /** Aksi yang datang sebelum controller tersambung — dijalankan saat connect, tidak hilang diam-diam. */
     private val pending = mutableListOf<(MediaController) -> Unit>()
+    private var connectAttempts = 0
 
     init {
         connect()
         scope.launch(Dispatchers.IO) {
-            // Restore queue saja (metadata), current dibiarkan null supaya
-            // mini-player tidak nampil lagu basi yang belum di-load ke controller.
-            val saved = db.queueDao().load()
-            if (saved.isNotEmpty()) {
-                _state.value = _state.value.copy(queue = saved.map { it.toTrack() })
+            try {
+                // Restore queue saja (metadata), current dibiarkan null supaya
+                // mini-player tidak nampil lagu basi yang belum di-load ke controller.
+                val saved = db.queueDao().load()
+                    .filter { it.source == "youtube" || !it.localUri.isNullOrBlank() }
+                if (saved.isNotEmpty()) {
+                    _state.value = _state.value.copy(queue = saved.map { it.toTrack() })
+                }
+            } catch (e: Exception) {
+                Log.w("LiPhifyPlayer", "restore queue gagal", e)
             }
         }
     }
 
     private fun connect() {
-        val token = SessionToken(context, ComponentName(context, LiPhifySessionService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
-        future.addListener({
-            val c = future.get()
-            controller = c
-            c.addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    _state.value = _state.value.copy(isPlaying = isPlaying)
-                    if (isPlaying) startTicker() else ticker?.cancel()
+        try {
+            val token = SessionToken(context, ComponentName(context, LiPhifySessionService::class.java))
+            val future = MediaController.Builder(context, token).buildAsync()
+            future.addListener({
+                val c = try {
+                    future.get()
+                } catch (e: Exception) {
+                    Log.w("LiPhifyPlayer", "controller connect gagal", e)
+                    connectAttempts++
+                    if (connectAttempts <= 3) {
+                        scope.launch {
+                            delay(3000)
+                            connect()
+                        }
+                    }
+                    return@addListener
                 }
-
-                override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                    val track = _state.value.queue.find { it.key == item?.mediaId }
-                    if (track != null) {
-                        _state.value = _state.value.copy(current = track)
-                        recordHistory(track)
+                connectAttempts = 0
+                controller = c
+                c.addListener(playerListener)
+                _state.value = _state.value.copy(
+                    isPlaying = c.isPlaying,
+                    controllerReady = true,
+                    shuffleEnabled = c.shuffleModeEnabled,
+                    repeatMode = c.repeatMode,
+                )
+                pending.forEach { block ->
+                    try {
+                        block(c)
+                    } catch (e: Exception) {
+                        Log.w("LiPhifyPlayer", "pending gagal", e)
                     }
                 }
-
-                override fun onShuffleModeEnabledChanged(enabled: Boolean) {
-                    _state.value = _state.value.copy(shuffleEnabled = enabled)
-                }
-
-                override fun onRepeatModeChanged(mode: Int) {
-                    _state.value = _state.value.copy(repeatMode = mode)
-                }
-            })
-            _state.value = _state.value.copy(
-                isPlaying = c.isPlaying,
-                controllerReady = true,
-                shuffleEnabled = c.shuffleModeEnabled,
-                repeatMode = c.repeatMode,
-            )
-            pending.forEach { it(c) }
-            pending.clear()
-        }, MoreExecutors.directExecutor())
+                pending.clear()
+            }, MoreExecutors.directExecutor())
+        } catch (e: Exception) {
+            Log.w("LiPhifyPlayer", "build controller gagal", e)
+        }
     }
 
-    private fun withController(block: (MediaController) -> Unit) {
-        val c = controller
-        if (c != null) block(c) else pending.add(block)
+    private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _state.value = _state.value.copy(isPlaying = isPlaying)
+            if (isPlaying) startTicker() else ticker?.cancel()
+        }
+
+        override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+            val track = _state.value.queue.find { it.key == item?.mediaId }
+            if (track != null) {
+                _state.value = _state.value.copy(current = track)
+                recordHistory(track)
+            }
+        }
+
+        override fun onShuffleModeEnabledChanged(enabled: Boolean) {
+            _state.value = _state.value.copy(shuffleEnabled = enabled)
+        }
+
+        override fun onRepeatModeChanged(mode: Int) {
+            _state.value = _state.value.copy(repeatMode = mode)
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            _state.value = _state.value.copy(
+                isPlaying = false,
+                error = "Gagal memutar lagu ini (${error.errorCodeName}), coba lagu lain",
+            )
+        }
     }
 
     private fun startTicker() {
         ticker?.cancel()
         ticker = scope.launch {
             while (true) {
-                val c = controller
-                if (c != null && c.duration > 0) {
-                    _state.value = _state.value.copy(
-                        positionMs = c.currentPosition.coerceAtLeast(0),
-                        durationMs = c.duration,
-                    )
+                try {
+                    val c = controller
+                    if (c != null && c.duration > 0) {
+                        _state.value = _state.value.copy(
+                            positionMs = c.currentPosition.coerceAtLeast(0),
+                            durationMs = c.duration,
+                        )
+                    }
+                } catch (_: Exception) {
                 }
                 delay(400)
             }
@@ -166,11 +206,14 @@ class PlaybackViewModel @Inject constructor(
             val url = resolveUrl(track) ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
             withController { c ->
-                val idx = (c.currentMediaItemIndex + 1).coerceAtLeast(0)
+                val idx = if (c.mediaItemCount > 0) (c.currentMediaItemIndex + 1).coerceIn(0, c.mediaItemCount) else 0
                 c.addMediaItem(idx, item)
             }
+            val cur = _state.value.current
             val q = _state.value.queue.toMutableList()
-            q.add((_state.value.queue.indexOf(_state.value.current) + 1).coerceIn(0, q.size), track)
+            q.removeAll { it.key == track.key }
+            val at = if (cur != null) (q.indexOfFirst { it.key == cur.key } + 1).coerceIn(0, q.size) else 0
+            q.add(at, track)
             _state.value = _state.value.copy(queue = q)
             persistQueue(q)
         }
@@ -181,7 +224,9 @@ class PlaybackViewModel @Inject constructor(
             val url = resolveUrl(track) ?: return@launch
             val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
             withController { c -> c.addMediaItem(item) }
-            val q = _state.value.queue + track
+            val q = _state.value.queue.toMutableList()
+            q.removeAll { it.key == track.key }
+            q.add(track)
             _state.value = _state.value.copy(queue = q)
             persistQueue(q)
         }
@@ -190,7 +235,11 @@ class PlaybackViewModel @Inject constructor(
     fun moveQueue(from: Int, to: Int) {
         val q = _state.value.queue
         if (from !in q.indices || to !in q.indices) return
-        withController { c -> c.moveMediaItem(from, to) }
+        withController { c ->
+            if (from < c.mediaItemCount && to < c.mediaItemCount) {
+                c.moveMediaItem(from, to)
+            }
+        }
         val next = q.toMutableList()
         val t = next.removeAt(from)
         next.add(to, t)
@@ -198,48 +247,68 @@ class PlaybackViewModel @Inject constructor(
         scope.launch(Dispatchers.IO) { persistQueue(next) }
     }
 
-    fun togglePlayPause() = withController { c -> if (c.isPlaying) c.pause() else c.play() }
-    fun next() = withController { c -> c.seekToNext() }
-    fun prev() = withController { c -> c.seekToPrevious() }
-    fun seekTo(ms: Long) = withController { c -> c.seekTo(ms) }
+    fun togglePlayPause() = withController { c ->
+        if (c.mediaItemCount == 0) return@withController
+        if (c.isPlaying) c.pause() else c.play()
+    }
+
+    fun next() = withController { c -> if (c.mediaItemCount > 0) c.seekToNext() }
+    fun prev() = withController { c -> if (c.mediaItemCount > 0) c.seekToPrevious() }
+    fun seekTo(ms: Long) = withController { c ->
+        if (c.duration > 0) c.seekTo(ms.coerceIn(0, c.duration))
+    }
+
     fun setShuffle(v: Boolean) = withController { c -> c.shuffleModeEnabled = v }
     fun setRepeat(mode: Int) = withController { c -> c.repeatMode = mode }
 
     /** Lazy resolve: lokal = contentUri langsung; YT = re-resolve tiap mau play (URL expired). */
     private suspend fun resolveUrl(t: Track): String? {
         return when (val s = t.source) {
-            is PlaybackSource.Local -> s.uri.toString()
-            is PlaybackSource.YouTube -> when (val r = repo.resolveStream(s.videoId)) {
-                is YtResult.Ok -> r.value
-                is YtResult.Fail -> {
-                    _state.value = _state.value.copy(error = r.message)
-                    null
+            is PlaybackSource.Local -> s.uri.toString().ifBlank { null }
+            is PlaybackSource.YouTube -> try {
+                when (val r = withTimeout(20_000) { repo.resolveStream(s.videoId) }) {
+                    is YtResult.Ok -> r.value
+                    is YtResult.Fail -> {
+                        _state.value = _state.value.copy(error = r.message)
+                        null
+                    }
                 }
+            } catch (_: Throwable) {
+                _state.value = _state.value.copy(error = "Gagal ambil data dari YouTube, coba lagi")
+                null
             }
         }
     }
 
     private suspend fun persistQueue(q: List<Track>) {
-        val entities = q.mapIndexed { i, t ->
-            val (source, localUri, videoId) = when (val s = t.source) {
-                is PlaybackSource.Local -> Triple("local", s.uri.toString(), null as String?)
-                is PlaybackSource.YouTube -> Triple("youtube", null, s.videoId)
+        try {
+            val entities = q.mapIndexed { i, t ->
+                val (source, localUri, videoId) = when (val s = t.source) {
+                    is PlaybackSource.Local -> Triple("local", s.uri.toString(), null as String?)
+                    is PlaybackSource.YouTube -> Triple("youtube", null, s.videoId)
+                }
+                QueueEntity(i, t.key, t.title, t.artist, t.artwork, source, localUri, videoId)
             }
-            QueueEntity(i, t.key, t.title, t.artist, t.artwork, source, localUri, videoId)
+            db.queueDao().clear()
+            db.queueDao().saveAll(entities)
+        } catch (e: Exception) {
+            Log.w("LiPhifyPlayer", "persist queue gagal", e)
         }
-        db.queueDao().clear()
-        db.queueDao().saveAll(entities)
     }
 
     private fun recordHistory(t: Track) {
         scope.launch(Dispatchers.IO) {
-            val (source, localUri, videoId) = when (val s = t.source) {
-                is PlaybackSource.Local -> Triple("local", s.uri.toString(), null as String?)
-                is PlaybackSource.YouTube -> Triple("youtube", null, s.videoId)
+            try {
+                val (source, localUri, videoId) = when (val s = t.source) {
+                    is PlaybackSource.Local -> Triple("local", s.uri.toString(), null as String?)
+                    is PlaybackSource.YouTube -> Triple("youtube", null, s.videoId)
+                }
+                db.historyDao().upsert(
+                    HistoryEntity(t.key, t.title, t.artist, t.artwork, source, localUri, videoId, System.currentTimeMillis()),
+                )
+            } catch (e: Exception) {
+                Log.w("LiPhifyPlayer", "history gagal", e)
             }
-            db.historyDao().upsert(
-                HistoryEntity(t.key, t.title, t.artist, t.artwork, source, localUri, videoId, System.currentTimeMillis()),
-            )
         }
     }
 
@@ -247,14 +316,17 @@ class PlaybackViewModel @Inject constructor(
         val src = if (source == "youtube" && videoId != null) {
             PlaybackSource.YouTube(videoId)
         } else {
-            PlaybackSource.Local(android.net.Uri.parse(localUri ?: ""))
+            PlaybackSource.Local(Uri.parse(localUri ?: ""))
         }
         return Track(trackKey, title, artist, "", 0L, artwork, src)
     }
 
     override fun onCleared() {
         ticker?.cancel()
-        controller?.release()
+        try {
+            controller?.release()
+        } catch (_: Exception) {
+        }
         scope.cancel()
     }
 }

@@ -48,9 +48,8 @@ import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
 import com.zaaam.liphify.ui.player.PlaybackViewModel
 import com.zaaam.liphify.ui.playlist.PlaylistViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private sealed interface LibView {
     data object Main : LibView
@@ -66,7 +65,7 @@ private sealed interface LibView {
 @Composable
 fun LibraryScreen(
     player: PlaybackViewModel,
-    vm: LibraryViewModel = hiltViewModel(),
+    vm: LibraryViewModel,
     plVm: PlaylistViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -79,9 +78,14 @@ fun LibraryScreen(
 
     if (state.needsPermission) {
         Column(Modifier.fillMaxSize().padding(24.dp)) {
-            Text("Perlu izin audio untuk memindai musik di perangkat.")
+            Text("Perlu izin audio untuk membaca folder Music/LiPhify.")
+            Text(
+                "Taruh file lagu di folder Music/LiPhify, lalu pindai.",
+                color = com.zaaam.liphify.ui.theme.TextSecondary,
+                modifier = Modifier.padding(top = 6.dp),
+            )
             Spacer(Modifier.height(12.dp))
-            Button(onClick = { launcher.launch(perm) }) { Text("Pindai musik di perangkat") }
+            Button(onClick = { launcher.launch(perm) }) { Text("Pindai folder LiPhify") }
         }
         return
     }
@@ -119,7 +123,14 @@ fun LibraryScreen(
                     }
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Songs • ${state.songCount}", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+                            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                                Text("Songs • ${state.songCount}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Music/LiPhify" + if (state.lastScanCount >= 0) " • scan: ${state.lastScanCount} lagu" else "",
+                                    fontSize = 12.sp,
+                                    color = com.zaaam.liphify.ui.theme.TextSecondary,
+                                )
+                            }
                             TextButton(onClick = { vm.scan() }) { Text(if (state.scanning) "Memindai…" else "Refresh") }
                         }
                     }
@@ -243,9 +254,7 @@ private fun PlaylistDetail(
     var menu by remember { mutableStateOf<Track?>(null) }
     val pls by plVm.playlists.collectAsState()
     LaunchedEffect(id) {
-        CoroutineScope(Dispatchers.IO).launch {
-            tracks = plVm.tracksOf(id)
-        }
+        tracks = withContext(Dispatchers.IO) { plVm.tracksOf(id) }
     }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         item {

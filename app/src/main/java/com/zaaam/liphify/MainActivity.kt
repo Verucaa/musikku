@@ -47,6 +47,7 @@ import androidx.navigation.navArgument
 import com.zaaam.liphify.ui.browse.BrowseScreen
 import com.zaaam.liphify.ui.home.HomeScreen
 import com.zaaam.liphify.ui.library.LibraryScreen
+import com.zaaam.liphify.ui.library.LibraryViewModel
 import com.zaaam.liphify.ui.nav.Tab
 import com.zaaam.liphify.ui.player.MiniPlayer
 import com.zaaam.liphify.ui.player.NowPlayingScreen
@@ -64,19 +65,20 @@ import dev.chrisbanes.haze.hazeChild
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val player: PlaybackViewModel by viewModels()
+    private val libraryVm: LibraryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LiPhifyTheme {
-                LiPhifyScaffold(player)
+                LiPhifyScaffold(player, libraryVm)
             }
         }
     }
 }
 
 @Composable
-fun LiPhifyScaffold(player: PlaybackViewModel) {
+fun LiPhifyScaffold(player: PlaybackViewModel, libraryVm: LibraryViewModel) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
@@ -130,7 +132,12 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                             val onSearch = route?.startsWith("search") == true
                             IconButton(
-                                onClick = { nav.navigate("search") },
+                                onClick = {
+                                    nav.navigate("search") {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
                                 modifier = Modifier.size(44.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(
@@ -151,9 +158,15 @@ fun LiPhifyScaffold(player: PlaybackViewModel) {
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad).haze(state = hazeState)) {
             NavHost(nav, startDestination = Tab.Library.route) {
-                composable(Tab.Home.route) { HomeScreen(player) }
-                composable(Tab.New.route) { BrowseScreen(onGenre = { nav.navigate("search?preset=" + android.net.Uri.encode(it)) }) }
-                composable(Tab.Library.route) { LibraryScreen(player) }
+                composable(Tab.Home.route) { HomeScreen(player = player, libVm = libraryVm) }
+                composable(Tab.New.route) {
+                    BrowseScreen(onGenre = {
+                        nav.navigate("search?preset=" + android.net.Uri.encode(it)) {
+                            launchSingleTop = true
+                        }
+                    })
+                }
+                composable(Tab.Library.route) { LibraryScreen(player = player, vm = libraryVm) }
                 composable(
                     "search?preset={preset}",
                     arguments = listOf(navArgument("preset") { type = NavType.StringType; defaultValue = "" }),
@@ -177,7 +190,15 @@ private fun TabItem(
     modifier: Modifier = Modifier,
 ) {
     val selected = route == tab.route
-    IconButton(onClick = { nav.navigate(tab.route) }, modifier = modifier) {
+    IconButton(
+        onClick = {
+            nav.navigate(tab.route) {
+                launchSingleTop = true
+                restoreState = true
+            }
+        },
+        modifier = modifier,
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 icon,

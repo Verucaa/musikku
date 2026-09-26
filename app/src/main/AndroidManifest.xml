@@ -4,6 +4,9 @@
 
     <!-- PRD-001: scan MediaStore -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- API <33: nama izin lama (wajib dideklarasikan agar request tidak auto-denied) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <!-- Foreground service untuk playback (PRD-006) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

@@ -29,18 +29,22 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val rows = withContext(Dispatchers.IO) { db.historyDao().recent(10) }
-            val recent = rows.map {
-                val src = if (it.source == "youtube" && it.videoId != null) {
-                    PlaybackSource.YouTube(it.videoId)
-                } else {
-                    PlaybackSource.Local(Uri.parse(it.localUri ?: ""))
+            try {
+                val rows = withContext(Dispatchers.IO) { db.historyDao().recent(10) }
+                val recent = rows.map {
+                    val src = if (it.source == "youtube" && it.videoId != null) {
+                        PlaybackSource.YouTube(it.videoId)
+                    } else {
+                        PlaybackSource.Local(Uri.parse(it.localUri ?: ""))
+                    }
+                    Track(it.trackKey, it.title, it.artist, "", 0L, it.artwork, src)
                 }
-                Track(it.trackKey, it.title, it.artist, "", 0L, it.artwork, src)
+                val added = withContext(Dispatchers.IO) { db.trackDao().recentlyAdded(10) }
+                val newMusic = added.map { it.toTrack() }
+                _state.value = HomeUiState(recent, newMusic)
+            } catch (e: Exception) {
+                android.util.Log.w("LiPhifyHome", "refresh gagal", e)
             }
-            val added = withContext(Dispatchers.IO) { db.trackDao().recentlyAdded(10) }
-            val newMusic = added.map { it.toTrack() }
-            _state.value = HomeUiState(recent, newMusic)
         }
     }
 }

@@ -17,6 +17,8 @@ object DatabaseModule {
     @Singleton
     fun db(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "liphify.db")
+            .addMigrations(MIGRATION_2_3)
             .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 }

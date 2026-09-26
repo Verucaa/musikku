@@ -18,6 +18,9 @@ data class TrackEntity(
     val dateAdded: Long,
     /** URI artwork album nyata dari MediaStore (null kalau tidak ada). */
     val artworkUri: String? = null,
+    /** RELATIVE_PATH saat scan — dasar scoping folder Music/LiPhify. */
+    val relativePath: String = "",
+    val mimeType: String? = null,
 )
 
 @Entity(tableName = "yt_cache")
@@ -98,6 +101,13 @@ interface TrackDao {
 
     @Query("DELETE FROM tracks WHERE mediaId NOT IN (:keep)")
     suspend fun pruneMissing(keep: List<Long>)
+
+    @Query("DELETE FROM tracks")
+    suspend fun clearAll()
+
+    /** Purge satu-kali: hapus baris di luar folder aplikasi. */
+    @Query("DELETE FROM tracks WHERE relativePath NOT LIKE 'Music/LiPhify/%'")
+    suspend fun purgeNonAppFolder(): Int
 }
 
 @Dao
@@ -122,6 +132,9 @@ interface PlaylistDao {
 
     @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlistId = :id")
     suspend fun trackCount(id: Long): Int
+
+    @Query("SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlistId = :id")
+    suspend fun maxPosition(id: Long): Int
 }
 
 @Dao

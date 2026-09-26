@@ -12,7 +12,8 @@ class LiPhifyApp : Application() {
         // NewPipeExtractor wajib init downloader sekali (PRD-003/004).
         try {
             NewPipe.init(OkHttpDownloader())
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
+            android.util.Log.w("LiPhifyApp", "NewPipe init gagal — fitur YouTube nonaktif")
         }
     }
 }

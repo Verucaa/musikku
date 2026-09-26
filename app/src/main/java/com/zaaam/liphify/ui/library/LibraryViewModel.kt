@@ -3,19 +3,22 @@ package com.zaaam.liphify.ui.library
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
-import com.zaaam.liphify.data.local.AppDatabase
-import com.zaaam.liphify.data.local.MediaStoreScanner
-import com.zaaam.liphify.data.repository.toTrack
-import com.zaaam.liphify.domain.model.Track
-import com.zaaam.liphify.data.repository.MusicRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zaaam.liphify.data.local.AppDatabase
+import com.zaaam.liphify.data.local.MediaStoreScanner
+import com.zaaam.liphify.data.repository.MusicRepository
+import com.zaaam.liphify.data.repository.toTrack
+import com.zaaam.liphify.domain.model.Track
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import android.content.Context
 
@@ -28,6 +31,7 @@ data class LibraryUiState(
     val playlistNames: List<Pair<Long, String>> = emptyList(),
     val needsPermission: Boolean = false,
     val scanning: Boolean = false,
+    val lastScanCount: Int = -1,
 )
 
 @HiltViewModel
@@ -54,11 +58,15 @@ class LibraryViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            if (!hasPermission()) {
-                _state.value = _state.value.copy(needsPermission = true)
-                return@launch
+            try {
+                if (!hasPermission()) {
+                    _state.value = _state.value.copy(needsPermission = true)
+                    return@launch
+                }
+                loadFromDb()
+            } catch (e: Exception) {
+                Log.w("LiPhifyLib", "refresh gagal", e)
             }
-            loadFromDb()
         }
     }
 
@@ -66,10 +74,16 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(scanning = true, needsPermission = false)
             try {
-                scanner.scan()
-            } catch (_: Exception) {
+                val n = withContext(Dispatchers.IO) { scanner.scan() }
+                _state.value = _state.value.copy(lastScanCount = n)
+            } catch (e: Exception) {
+                Log.w("LiPhifyLib", "scan gagal", e)
             }
-            loadFromDb()
+            try {
+                loadFromDb()
+            } catch (e: Exception) {
+                Log.w("LiPhifyLib", "load gagal", e)
+            }
             _state.value = _state.value.copy(scanning = false)
         }
     }
@@ -77,12 +91,19 @@ class LibraryViewModel @Inject constructor(
     /** Auto-scan saat pertama buka kalau DB masih kosong (punya izin). */
     fun scanIfEmpty() {
         viewModelScope.launch {
-            if (!hasPermission()) {
-                _state.value = _state.value.copy(needsPermission = true)
-                return@launch
+            try {
+                if (!hasPermission()) {
+                    _state.value = _state.value.copy(needsPermission = true)
+                    return@launch
+                }
+                if (withContext(Dispatchers.IO) { db.trackDao().count() } == 0 && !_state.value.scanning) {
+                    scan()
+                } else {
+                    loadFromDb()
+                }
+            } catch (e: Exception) {
+                Log.w("LiPhifyLib", "scanIfEmpty gagal", e)
             }
-            if (db.trackDao().count() == 0 && !_state.value.scanning) scan()
-            else loadFromDb()
         }
     }
 
@@ -99,6 +120,7 @@ class LibraryViewModel @Inject constructor(
             playlistNames = db.playlistDao().playlists().map { it.id to it.name },
             needsPermission = false,
             scanning = false,
+            lastScanCount = _state.value.lastScanCount,
         )
     }
 }
