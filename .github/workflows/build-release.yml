@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -50,3 +52,23 @@ jobs:
         with:
           name: LiPhify-release
           path: app/build/outputs/apk/release/*.apk
+      - name: Publish ke Release v1.0.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v1.0.0"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "LiPhify v1.0.0" --notes "Build otomatis tiap push ke main."
+          APK=$(ls app/build/outputs/apk/release/*-signed.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            echo "Tidak ada APK signed (secrets kosong?) — skip publish."
+            exit 0
+          fi
+          SHORT=$(git rev-parse --short HEAD)
+          NAME="LiPhify-v1.0.0-${SHORT}-signed.apk"
+          cp "$APK" "/tmp/$NAME"
+          gh release upload "$TAG" "/tmp/$NAME" --clobber
+          # Bersihkan asset lama, sisakan yang baru diupload
+          for a in $(gh release view "$TAG" --json assets -q '.assets[].name' | grep '^LiPhify-v1.0.0-.*-signed.apk$' | grep -v "^$NAME$"); do
+            gh release delete-asset "$TAG" "$a" -y
+          done
+          gh release view "$TAG" --json assets -q '.assets[].name'
