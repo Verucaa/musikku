@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.search.SearchInfo
-import org.schabi.newpipe.extractor.services.youtube.YoutubeSearchQueryHandlerFactory
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.util.Calendar
