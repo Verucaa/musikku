@@ -38,8 +38,8 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speaker
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
@@ -83,7 +83,7 @@ import kotlinx.coroutines.launch
  * artwork full-bleed atas + drag handle, judul + bintang + ⋯, progress,
  * kontrol besar, volume, baris bawah (lirik disabled jujur / output / queue).
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun NowPlayingScreen(
     state: PlayerUiState,
@@ -186,13 +186,10 @@ fun NowPlayingScreen(
                     }
                     IconButton(onClick = { player.let { plVm.toggleFavorite(cur) } }) {
                         Icon(
-                            if (isFav) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            if (isFav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                             contentDescription = if (isFav) "Hapus dari Favorit" else "Tambah ke Favorit",
                             tint = if (isFav) Accent else Color.White.copy(alpha = 0.8f),
                         )
-                    }
-                    IconButton(onClick = { menu = cur }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Menu lagu", tint = Color.White.copy(alpha = 0.8f))
                     }
                 }
 
@@ -241,8 +238,9 @@ fun NowPlayingScreen(
                         am.getStreamVolume(AudioManager.STREAM_MUSIC).coerceIn(0, max).toFloat(),
                     )
                 }
+                Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.VolumeDown, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                    Icon(Icons.Filled.VolumeDown, contentDescription = null, tint = Color.White.copy(alpha = 0.45f), modifier = Modifier.size(16.dp))
                     var volDrag: Float? by remember { mutableStateOf(null) }
                     Slider(
                         value = volDrag ?: vol,
@@ -255,9 +253,14 @@ fun NowPlayingScreen(
                             }
                             volDrag = null
                         },
-                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Color.White.copy(alpha = 0.7f),
+                            activeTrackColor = Color.White.copy(alpha = 0.45f),
+                            inactiveTrackColor = Color.White.copy(alpha = 0.15f),
+                        ),
+                        modifier = Modifier.weight(1f).height(24.dp),
                     )
-                    Icon(Icons.Filled.VolumeUp, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                    Icon(Icons.Filled.VolumeUp, contentDescription = null, tint = Color.White.copy(alpha = 0.45f), modifier = Modifier.size(16.dp))
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Spacer(Modifier.weight(1f))
@@ -282,7 +285,13 @@ fun NowPlayingScreen(
                     Spacer(Modifier.weight(1f))
                 }
                 if (state.showQueue) {
-                    QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
+                    androidx.compose.material3.ModalBottomSheet(
+                        onDismissRequest = { player.toggleQueue(false) },
+                        dragHandle = null,
+                        containerColor = Color(0xFF1C1C1E),
+                    ) {
+                        QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
+                    }
                 }
             } else {
                 Text("Tidak ada lagu. Pilih dari Library atau Search.", Modifier.padding(20.dp))
@@ -364,7 +373,7 @@ private fun QueuePanel(
             Text("Playing Next", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             TextButton(onClick = { player.clearQueue() }) { Text("Clear") }
         }
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
             itemsIndexed(state.queue, key = { idx, t -> "$idx:${t.key.hashCode()}" }) { idx, t ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Artwork(model = t.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)

@@ -185,7 +185,18 @@ fun LiPhifyScaffold(
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad).haze(state = hazeState)) {
             NavHost(nav, startDestination = Tab.Library.route) {
-                composable(Tab.Home.route) { HomeScreen(player = player, libVm = libraryVm, plVm = playlistVm) }
+                composable(Tab.Home.route) {
+                    HomeScreen(
+                        player = player,
+                        libVm = libraryVm,
+                        plVm = playlistVm,
+                        onGenre = {
+                            nav.navigate("search?preset=" + android.net.Uri.encode(it)) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
                 composable(Tab.New.route) {
                     BrowseScreen(onGenre = {
                         nav.navigate("search?preset=" + android.net.Uri.encode(it)) {

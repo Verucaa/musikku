@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.zaaam.liphify.domain.model.Track
 import com.zaaam.liphify.ui.common.Artwork
+import com.zaaam.liphify.ui.common.GENRES
+import com.zaaam.liphify.ui.common.GenreTile
 import com.zaaam.liphify.ui.common.LargeTitle
 import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
@@ -45,12 +48,15 @@ import com.zaaam.liphify.ui.theme.TextSecondary
 /**
  * Home: 100% data nyata. Tidak ada hero rekomendasi dummy — bagian itu
  * di-skip sesuai aturan (rekomendasi algoritmik di luar scope v1).
+ * Section "Browse" reuse GENRES/GenreTile yang sama dengan tab New/Search,
+ * biar Home tetap ada konten nyata & fungsional walau histori masih dikit.
  */
 @Composable
 fun HomeScreen(
     player: PlaybackViewModel,
     libVm: LibraryViewModel,
     plVm: PlaylistViewModel,
+    onGenre: (String) -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsState()
@@ -116,6 +122,18 @@ fun HomeScreen(
                     Text("Perlu izin audio untuk memindai musik di perangkat.", color = TextSecondary)
                     Button(onClick = { launcher.launch(allPerms) }, modifier = Modifier.padding(vertical = 8.dp)) {
                         Text("Beri izin & pindai")
+                    }
+                }
+            }
+        }
+        item {
+            Text("Browse", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        item {
+            LazyRow(Modifier.padding(vertical = 8.dp)) {
+                items(GENRES) { (name, colors) ->
+                    Box(Modifier.padding(start = 16.dp).width(160.dp)) {
+                        GenreTile(name, colors) { onGenre(name) }
                     }
                 }
             }

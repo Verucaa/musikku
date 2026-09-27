@@ -62,13 +62,21 @@ class PlaybackViewModel @Inject constructor(
 
     private fun withController(block: (MediaController) -> Unit) {
         val c = controller
-        if (c != null) {
+        if (c != null && c.isConnected) {
             try {
                 block(c)
             } catch (e: Exception) {
                 Log.w("LiPhifyPlayer", "controller call gagal", e)
+                _state.value = _state.value.copy(error = "Aksi gagal, coba lagi")
             }
         } else {
+            if (c != null && !c.isConnected) {
+                // Koneksi ke playback service putus di tengah sesi (mis. service
+                // di-kill OS) — reset & coba sambung ulang otomatis, bukan diem aja.
+                controller = null
+                connectAttempts = 0
+                connect()
+            }
             if (pending.size >= 20) pending.removeAt(0)
             pending.add(block)
         }
@@ -189,8 +197,17 @@ class PlaybackViewModel @Inject constructor(
         override fun onPlayerError(error: PlaybackException) {
             _state.value = _state.value.copy(
                 isPlaying = false,
-                error = "Gagal memutar lagu ini (${error.errorCodeName}), coba lagu lain",
+                error = "Gagal memutar lagu ini (${error.errorCodeName}), lanjut ke lagu berikutnya…",
             )
+            // Jangan biarin antrian macet total gara-gara satu URL YouTube yang
+            // udah basi/gagal — coba lanjut ke lagu berikutnya secara otomatis.
+            withController { c ->
+                if (c.hasNextMediaItem()) {
+                    c.seekToNext()
+                    c.prepare()
+                    c.play()
+                }
+            }
         }
     }
 
