@@ -119,12 +119,13 @@ fun LiPhifyScaffold(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF2C2C2E).copy(alpha = 0.78f),
+                        color = Color(0xFF2C2C2E).copy(alpha = 0.55f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
                         modifier = Modifier.padding(bottom = 8.dp).hazeChild(
                             state = hazeState,
                             style = HazeDefaults.style(
-                                backgroundColor = Color(0xFF2C2C2E).copy(alpha = 0.78f),
-                                blurRadius = 24.dp,
+                                backgroundColor = Color(0xFF2C2C2E).copy(alpha = 0.55f),
+                                blurRadius = 34.dp,
                             ),
                         ),
                     ) {
@@ -138,12 +139,13 @@ fun LiPhifyScaffold(
                 }
                 Surface(
                     shape = RoundedCornerShape(26.dp),
-                    color = Color(0xFF1C1C1E).copy(alpha = 0.78f),
+                    color = Color(0xFF1C1C1E).copy(alpha = 0.55f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
                     modifier = Modifier.hazeChild(
                         state = hazeState,
                         style = HazeDefaults.style(
-                            backgroundColor = Color(0xFF1C1C1E).copy(alpha = 0.78f),
-                            blurRadius = 24.dp,
+                            backgroundColor = Color(0xFF1C1C1E).copy(alpha = 0.55f),
+                            blurRadius = 34.dp,
                         ),
                     ),
                 ) {

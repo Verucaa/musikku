@@ -1,7 +1,10 @@
 package com.zaaam.liphify.ui.common
 
+import android.content.Intent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,9 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -39,6 +46,7 @@ import coil.compose.AsyncImage
 import com.zaaam.liphify.R
 import com.zaaam.liphify.data.local.PlaylistEntity
 import com.zaaam.liphify.domain.model.Track
+import com.zaaam.liphify.ui.theme.Accent
 import com.zaaam.liphify.ui.theme.Divider as DividerColor
 import com.zaaam.liphify.ui.theme.TextSecondary
 
@@ -78,6 +86,7 @@ fun Artwork(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TrackRow(
     track: Track,
@@ -87,7 +96,9 @@ fun TrackRow(
 ) {
     Column(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(vertical = 8.dp),
+            Modifier.fillMaxWidth()
+                .combinedClickable(onClick = onPlay, onLongClick = onMenu)
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Artwork(model = track.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
@@ -106,7 +117,7 @@ fun TrackRow(
     }
 }
 
-/** Action sheet: Play Next / Play Last / Add to Playlist (Room asli). */
+/** Action sheet: Play Next / Play Last / Favorit / Add to Playlist / Bagikan. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackSheet(
@@ -117,8 +128,11 @@ fun TrackSheet(
     onPlayLast: (Track) -> Unit,
     onCreatePlaylist: (String) -> Unit,
     onAddToPlaylist: (Long, Track) -> Unit,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (Track) -> Unit = {},
 ) {
     if (track == null) return
+    val ctx = LocalContext.current
     var picking by remember(track.key) { mutableStateOf(false) }
     var newName by remember(track.key) { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -135,7 +149,27 @@ fun TrackSheet(
         if (!picking) {
             SheetAction("Play Next", Icons.Filled.PlayArrow) { onPlayNext(track); onDismiss() }
             SheetAction("Play Last", Icons.Filled.PlaylistAdd) { onPlayLast(track); onDismiss() }
+            SheetAction(
+                if (isFavorite) "Hapus dari Favorit" else "Tambah ke Favorit",
+                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                tint = if (isFavorite) Accent else TextSecondary,
+            ) { onToggleFavorite(track); onDismiss() }
             SheetAction("Add to Playlist…", Icons.Filled.CreateNewFolder) { picking = true }
+            SheetAction("Bagikan", Icons.Filled.Share) {
+                // Real share intent — teks aja (judul+artis+link YT kalau ada), bukan file mentah.
+                val src = track.source
+                val text = if (src is com.zaaam.liphify.domain.model.PlaybackSource.YouTube) {
+                    "${track.title} - ${track.artist}\nhttps://youtu.be/${src.videoId}"
+                } else {
+                    "${track.title} - ${track.artist}"
+                }
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                ctx.startActivity(Intent.createChooser(intent, "Bagikan lagu"))
+                onDismiss()
+            }
         } else {
             playlists.forEach { p ->
                 SheetAction(p.name, Icons.Filled.PlaylistAdd) { onAddToPlaylist(p.id, track); onDismiss() }
@@ -157,10 +191,15 @@ fun TrackSheet(
 }
 
 @Composable
-private fun SheetAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun SheetAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color = TextSecondary,
+    onClick: () -> Unit,
+) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = TextSecondary, modifier = Modifier.padding(end = 16.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.padding(end = 16.dp))
             Text(label)
         }
     }

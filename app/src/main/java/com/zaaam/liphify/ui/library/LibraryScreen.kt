@@ -77,6 +77,7 @@ fun LibraryScreen(
 ) {
     val state by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
+    val favKeys by plVm.favoritKeys.collectAsState()
     // View tahan rotasi (rememberSaveable String, bukan objek).
     var viewKey by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var view: LibView by remember(viewKey) {
@@ -227,6 +228,8 @@ fun LibraryScreen(
         onPlayLast = { player.addToQueue(it) },
         onCreatePlaylist = { plVm.create(it) },
         onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+        isFavorite = menu?.let { favKeys.contains(it.key) } ?: false,
+        onToggleFavorite = { plVm.toggleFavorite(it) },
     )
 }
 
@@ -302,6 +305,7 @@ private fun PlaylistDetail(
     var tracks by remember(id) { mutableStateOf<List<PlaylistTrackEntity>>(emptyList()) }
     var menu by remember { mutableStateOf<Track?>(null) }
     val pls by plVm.playlists.collectAsState()
+    val favKeys by plVm.favoritKeys.collectAsState()
     LaunchedEffect(id, pls) {
         tracks = withContext(Dispatchers.IO) { plVm.tracksOf(id) }
     }
@@ -330,6 +334,8 @@ private fun PlaylistDetail(
         track = menu, playlists = pls, onDismiss = { menu = null },
         onPlayNext = { player.playNext(it) }, onPlayLast = { player.addToQueue(it) },
         onCreatePlaylist = { plVm.create(it) }, onAddToPlaylist = { pid, t -> plVm.addTrack(pid, t) },
+        isFavorite = menu?.let { favKeys.contains(it.key) } ?: false,
+        onToggleFavorite = { plVm.toggleFavorite(it) },
     )
 }
 

@@ -55,6 +55,7 @@ fun HomeScreen(
 ) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
+    val favKeys by plVm.favoritKeys.collectAsState()
     val lib by libVm.state.collectAsState()
     var menu by remember { mutableStateOf<Track?>(null) }
     val audioPerm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
@@ -176,5 +177,7 @@ fun HomeScreen(
         onPlayLast = { player.addToQueue(it) },
         onCreatePlaylist = { plVm.create(it) },
         onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+        isFavorite = menu?.let { favKeys.contains(it.key) } ?: false,
+        onToggleFavorite = { plVm.toggleFavorite(it) },
     )
 }

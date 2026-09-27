@@ -296,6 +296,8 @@ fun NowPlayingScreen(
             onPlayLast = { player.addToQueue(it) },
             onCreatePlaylist = { plVm.create(it) },
             onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+            isFavorite = menu?.let { favKeys.contains(it.key) } ?: false,
+            onToggleFavorite = { plVm.toggleFavorite(it) },
         )
     }
 }

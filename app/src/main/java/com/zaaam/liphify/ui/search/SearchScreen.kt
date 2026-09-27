@@ -56,6 +56,7 @@ fun SearchScreen(
 ) {
     val s by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
+    val favKeys by plVm.favoritKeys.collectAsState()
     var menu by remember { mutableStateOf<Track?>(null) }
     /** 0=Semua 1=Perangkat 2=YouTube — filter tampilan nyata. */
     var scope by remember { mutableIntStateOf(0) }
@@ -187,5 +188,7 @@ fun SearchScreen(
         onPlayLast = { player.addToQueue(it) },
         onCreatePlaylist = { plVm.create(it) },
         onAddToPlaylist = { id, t -> plVm.addTrack(id, t) },
+        isFavorite = menu?.let { favKeys.contains(it.key) } ?: false,
+        onToggleFavorite = { plVm.toggleFavorite(it) },
     )
 }
