@@ -14,7 +14,6 @@ import com.zaaam.liphify.ui.theme.ArchShape
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -133,7 +132,7 @@ fun HomeScreen(
                 ) {
                     Artwork(
                         model = last.artwork,
-                        modifier = Modifier.matchParentSize().blur(28.dp).graphicsLayer(alpha = 0.35f),
+                        modifier = Modifier.fillMaxSize().blur(28.dp).graphicsLayer(alpha = 0.35f),
                         radius = 0.dp,
                     )
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
