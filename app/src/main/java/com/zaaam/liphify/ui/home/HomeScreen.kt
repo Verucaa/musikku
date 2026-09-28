@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +53,7 @@ import com.zaaam.liphify.ui.common.Artwork
 import com.zaaam.liphify.ui.common.GENRES
 import com.zaaam.liphify.ui.common.GenreTile
 import com.zaaam.liphify.ui.common.LargeTitle
+import com.zaaam.liphify.ui.common.ScanEmptyState
 import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
 import com.zaaam.liphify.ui.library.LibraryViewModel
@@ -118,12 +121,12 @@ fun HomeScreen(
                     Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFF1C1C1E))
+                        .background(Brush.linearGradient(listOf(Color(0xFF3A2F5A), Color(0xFF1C1C1E))))
                         .clickable { player.playTrack(last, s.recent) }
-                        .padding(12.dp),
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Artwork(model = last.artwork, modifier = Modifier.size(52.dp), radius = 8.dp)
+                    Artwork(model = last.artwork, modifier = Modifier.size(64.dp), radius = 12.dp)
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text("Lanjut Dengerin", fontSize = 12.sp, color = TextSecondary)
                         Text(last.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
@@ -140,12 +143,10 @@ fun HomeScreen(
             }
         }
         item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                QuickAccessTile("Favorit", Icons.Filled.Favorite, Modifier.weight(1f), onOpenFavorit)
-                Spacer(Modifier.width(10.dp))
-                QuickAccessTile("Jelajah", Icons.Filled.Explore, Modifier.weight(1f), onOpenBrowse)
-                Spacer(Modifier.width(10.dp))
-                QuickAccessTile("Cari", Icons.Filled.Search, Modifier.weight(1f), onOpenSearch)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuickChip("Favorit", Icons.Filled.Favorite, onOpenFavorit)
+                QuickChip("Jelajah", Icons.Filled.Explore, onOpenBrowse)
+                QuickChip("Cari", Icons.Filled.Search, onOpenSearch)
             }
         }
         item {
@@ -173,22 +174,24 @@ fun HomeScreen(
             s.trending.isNotEmpty() -> {
                 item {
                     LazyRow(Modifier.padding(vertical = 8.dp)) {
-                        items(s.trending, key = { it.key }) { t ->
-                            Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.trending) }) {
-                                Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                                Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
+                        items(s.trending, key = { it.key }) { t -> MediaCard(t) { player.playTrack(t, s.trending) } }
                     }
                 }
-            }
-        }
-        if (lib.needsPermission) {            item {
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    Text("Perlu izin audio untuk memindai musik di perangkat.", color = TextSecondary)
-                    Button(onClick = { launcher.launch(allPerms) }, modifier = Modifier.padding(vertical = 8.dp)) {
-                        Text("Beri izin & pindai")
+                item {
+                    Text("Artis Terpopuler", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+                item {
+                    LazyRow(Modifier.padding(vertical = 8.dp)) {
+                        // Diturunin dari data Trending yang nyata; tap = cari artisnya.
+                        items(s.trending.distinctBy { it.artist }.take(8), key = { it.artist }) { t ->
+                            Column(
+                                Modifier.padding(start = 16.dp).width(80.dp).clickable { onGenre(t.artist) },
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Artwork(model = t.artwork, modifier = Modifier.size(76.dp), radius = 38.dp, fallbackIconSize = 32.dp)
+                                Text(t.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -217,15 +220,9 @@ fun HomeScreen(
                 )
             }
         } else {
-            item {
-                LazyRow(Modifier.padding(vertical = 8.dp)) {
-                    items(s.recent, key = { it.key }) { t ->
-                        Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.recent) }) {
-                            Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                            Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
+            items(s.recent.take(5), key = { it.key }) { t ->
+                Box(Modifier.padding(horizontal = 16.dp)) {
+                    TrackRow(track = t, onPlay = { player.playTrack(t, s.recent) }, onMenu = { menu = t })
                 }
             }
         }
@@ -234,22 +231,17 @@ fun HomeScreen(
         }
         if (s.newMusic.isEmpty()) {
             item {
-                Text(
-                    "Belum ada musik. Taruh lagu di folder Music/LiPhify lalu pindai dari Library.",
-                    Modifier.padding(16.dp),
-                    color = TextSecondary,
+                ScanEmptyState(
+                    scanning = lib.scanning,
+                    needsPermission = lib.needsPermission,
+                    onScan = { if (libVm.hasPermission()) libVm.scan() else launcher.launch(allPerms) },
+                    modifier = Modifier.padding(16.dp),
                 )
             }
         } else {
             item {
                 LazyRow(Modifier.padding(vertical = 8.dp)) {
-                    items(s.newMusic, key = { it.key }) { t ->
-                        Column(Modifier.padding(start = 16.dp).width(140.dp).clickable { player.playTrack(t, s.newMusic) }) {
-                            Artwork(model = t.artwork, modifier = Modifier.width(140.dp).height(140.dp), radius = 10.dp, fallbackIconSize = 48.dp)
-                            Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
+                    items(s.newMusic, key = { it.key }) { t -> MediaCard(t) { player.playTrack(t, s.newMusic) } }
                 }
             }
         }
@@ -268,14 +260,22 @@ fun HomeScreen(
 }
 
 @Composable
-private fun QuickAccessTile(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(
-        modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E)).clickable(onClick = onClick).padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun QuickChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(22.dp)).background(Color(0xFF1C1C1E)).clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Accent.copy(alpha = 0.9f)), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-        Text(label, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        Icon(icon, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
+        Text(label, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+    }
+}
+
+@Composable
+private fun MediaCard(t: Track, onClick: () -> Unit) {
+    Column(Modifier.padding(start = 16.dp).width(148.dp).clickable(onClick = onClick)) {
+        Artwork(model = t.artwork, modifier = Modifier.size(148.dp), radius = 12.dp, fallbackIconSize = 48.dp)
+        Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
     }
 }

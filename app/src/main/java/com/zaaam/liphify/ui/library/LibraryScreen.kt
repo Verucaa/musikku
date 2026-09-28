@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueueMusic
@@ -158,6 +159,9 @@ fun LibraryScreen(
                     item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
                     item {
                         Column {
+                            CatRow(Icons.Filled.Favorite, "Favorit") {
+                                pls.find { it.name == "Favorit" }?.let { go(LibView.Playlist(it.id, it.name)) } ?: go(LibView.Playlists)
+                            }
                             CatRow(Icons.Filled.QueueMusic, "Playlists") { go(LibView.Playlists) }
                             CatRow(Icons.Filled.Person, "Artists") { go(LibView.Artists) }
                             CatRow(Icons.Filled.Album, "Albums") { go(LibView.Albums) }
@@ -166,6 +170,13 @@ fun LibraryScreen(
                     }
                     item {
                         Text("Recently Added", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                        if (state.recentlyAdded.isEmpty()) {
+                            com.zaaam.liphify.ui.common.ScanEmptyState(
+                                scanning = state.scanning,
+                                needsPermission = false,
+                                onScan = { vm.scan() },
+                            )
+                        }
                         LazyRow {
                             items(state.recentlyAdded, key = { it.key }) { t ->
                                 Column(Modifier.padding(end = 12.dp).width(140.dp).clickable { playAll(t) }) {
