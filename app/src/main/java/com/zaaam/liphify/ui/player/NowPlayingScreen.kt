@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
 /**
  * PRD-005: Now Playing full-screen meniru Apple Music dari screenshot resmi:
  * artwork full-bleed atas + drag handle, judul + bintang + ⋯, progress,
- * kontrol besar, volume, baris bawah (lirik disabled jujur / output / queue).
+ * kontrol besar, volume, baris bawah (lirik / output / queue).
  */
 @OptIn(ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +99,8 @@ fun NowPlayingScreen(
     val pls by plVm.playlists.collectAsState()
     val favKeys by plVm.favoritKeys.collectAsState()
     val isFav = cur != null && favKeys.contains(cur.key)
+    val lyricsState by player.lyricsState.collectAsState()
+    var showLyrics by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         if (state.error != null) {
@@ -264,9 +266,8 @@ fun NowPlayingScreen(
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Spacer(Modifier.weight(1f))
-                    // PRD-101 masih P1: disabled jujur.
-                    IconButton(onClick = {}, enabled = false) {
-                        Icon(Icons.Filled.Subtitles, contentDescription = "Lirik belum tersedia", tint = Color.White.copy(alpha = 0.35f))
+                    IconButton(onClick = { player.loadLyrics(); showLyrics = true }) {
+                        Icon(Icons.Filled.Subtitles, contentDescription = "Lirik", tint = Color.White.copy(alpha = 0.8f))
                     }
                     Spacer(Modifier.width(24.dp))
                     IconButton(
@@ -291,6 +292,14 @@ fun NowPlayingScreen(
                         containerColor = Color(0xFF1C1C1E),
                     ) {
                         QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
+                    }
+                }
+                if (showLyrics) {
+                    androidx.compose.material3.ModalBottomSheet(
+                        onDismissRequest = { showLyrics = false },
+                        containerColor = Color(0xFF1C1C1E),
+                    ) {
+                        LyricsPanel(lyricsState = lyricsState, positionMs = state.positionMs)
                     }
                 }
             } else {
@@ -438,4 +447,52 @@ private fun QueuePill(
 private fun fmtMs(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return "${s / 60}:${(s % 60).toString().padStart(2, '0')}"
+}
+
+/**
+ * Panel lirik. Sumber: LyricsRepository (LRCLIB via lrcmux). Kalau ada versi
+ * synced (timestamp), baris yang lagi dinyanyiin di-highlight berdasarkan posisi lagu.
+ */
+@Composable
+private fun LyricsPanel(lyricsState: LyricsState, positionMs: Long) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Text("Lirik", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+        when (lyricsState) {
+            is LyricsState.Idle, is LyricsState.Loading -> {
+                Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+            }
+            is LyricsState.NotFound -> {
+                Text(
+                    "Lirik untuk lagu ini belum ketemu.",
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            }
+            is LyricsState.Success -> {
+                val lyrics = lyricsState.lyrics
+                if (lyrics.hasSynced) {
+                    val active = lyrics.synced.indexOfLast { it.timeMs <= positionMs }
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
+                        itemsIndexed(lyrics.synced) { i, line ->
+                            Text(
+                                line.text.ifBlank { "♪" },
+                                fontSize = if (i == active) 20.sp else 17.sp,
+                                fontWeight = if (i == active) FontWeight.Bold else FontWeight.Normal,
+                                color = if (i == active) Color.White else Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.padding(vertical = 6.dp),
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
+                        item {
+                            Text(lyrics.plain, fontSize = 17.sp, color = Color.White.copy(alpha = 0.85f))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

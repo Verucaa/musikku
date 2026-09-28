@@ -195,6 +195,11 @@ fun LiPhifyScaffold(
                                 launchSingleTop = true
                             }
                         },
+                        onOpenBrowse = { nav.navigate(Tab.New.route) { launchSingleTop = true } },
+                        onOpenSearch = { nav.navigate("search") { launchSingleTop = true } },
+                        onOpenFavorit = {
+                            nav.navigate("library?openFavorit=true") { launchSingleTop = true }
+                        },
                     )
                 }
                 composable(Tab.New.route) {
@@ -204,7 +209,17 @@ fun LiPhifyScaffold(
                         }
                     })
                 }
-                composable(Tab.Library.route) { LibraryScreen(player = player, vm = libraryVm, plVm = playlistVm) }
+                composable(
+                    "library?openFavorit={openFavorit}",
+                    arguments = listOf(navArgument("openFavorit") { type = NavType.BoolType; defaultValue = false }),
+                ) { entry ->
+                    LibraryScreen(
+                        player = player,
+                        vm = libraryVm,
+                        plVm = playlistVm,
+                        openFavorit = entry.arguments?.getBoolean("openFavorit") ?: false,
+                    )
+                }
                 composable(
                     "search?preset={preset}",
                     arguments = listOf(navArgument("preset") { type = NavType.StringType; defaultValue = "" }),
@@ -258,7 +273,7 @@ private fun TabItem(
     nav: androidx.navigation.NavController,
     modifier: Modifier = Modifier,
 ) {
-    val selected = route == tab.route
+    val selected = route?.substringBefore("?") == tab.route
     IconButton(
         onClick = {
             nav.navigate(tab.route) {

@@ -74,6 +74,7 @@ fun LibraryScreen(
     player: PlaybackViewModel,
     vm: LibraryViewModel,
     plVm: PlaylistViewModel,
+    openFavorit: Boolean = false,
 ) {
     val state by vm.state.collectAsState()
     val pls by plVm.playlists.collectAsState()
@@ -110,6 +111,13 @@ fun LibraryScreen(
             is LibView.Playlist -> "playlist:${v.id}|${v.name}"
         }
         view = v
+    }
+    // Deep-link dari Home: "Favorit" itu playlist otomatis (lihat PlaylistViewModel.ensureFavorit),
+    // jadi begitu daftar playlist ke-load, lompat langsung ke situ.
+    LaunchedEffect(openFavorit, pls) {
+        if (openFavorit && viewKey == null) {
+            pls.find { it.name == "Favorit" }?.let { go(LibView.Playlist(it.id, it.name)) }
+        }
     }
     var menu by remember { mutableStateOf<Track?>(null) }
     val audioPerm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE

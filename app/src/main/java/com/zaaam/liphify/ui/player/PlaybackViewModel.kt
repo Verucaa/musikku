@@ -10,11 +10,13 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.zaaam.liphify.data.LyricsRepository
 import com.zaaam.liphify.data.local.AppDatabase
 import com.zaaam.liphify.data.local.HistoryEntity
 import com.zaaam.liphify.data.local.QueueEntity
 import com.zaaam.liphify.data.repository.MusicRepository
 import com.zaaam.liphify.data.youtube.YtResult
+import com.zaaam.liphify.domain.model.Lyrics
 import com.zaaam.liphify.domain.model.PlaybackSource
 import com.zaaam.liphify.domain.model.Track
 import com.zaaam.liphify.playback.LiPhifySessionService
@@ -45,14 +47,36 @@ data class PlayerUiState(
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
 )
 
+/** Adaptasi dari Zmusic (LyricsState) — dipisah dari PlayerUiState karena siklus hidupnya beda (per-track, lazy-load). */
+sealed class LyricsState {
+    data object Idle : LyricsState()
+    data object Loading : LyricsState()
+    data class Success(val lyrics: Lyrics) : LyricsState()
+    data object NotFound : LyricsState()
+}
+
 @HiltViewModel
 class PlaybackViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: AppDatabase,
     private val repo: MusicRepository,
+    private val lyricsRepo: LyricsRepository,
 ) : androidx.lifecycle.ViewModel() {
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state
+
+    private val _lyricsState = MutableStateFlow<LyricsState>(LyricsState.Idle)
+    val lyricsState: StateFlow<LyricsState> = _lyricsState
+
+    fun loadLyrics() {
+        val track = _state.value.current ?: return
+        if (_lyricsState.value is LyricsState.Success || _lyricsState.value is LyricsState.Loading) return
+        viewModelScope.launch {
+            _lyricsState.value = LyricsState.Loading
+            val lyrics = lyricsRepo.getLyrics(track.title, track.artist)
+            _lyricsState.value = if (lyrics != null) LyricsState.Success(lyrics) else LyricsState.NotFound
+        }
+    }
 
     private var controller: MediaController? = null
     private var ticker: Job? = null
@@ -174,6 +198,7 @@ class PlaybackViewModel @Inject constructor(
         }
 
         override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+            _lyricsState.value = LyricsState.Idle
             val found = _state.value.queue.find { it.key == item?.mediaId }
             // Fallback: turunkan current dari metadata controller bila queue divergen.
             val track = found ?: item?.let { fallbackTrack(it) }

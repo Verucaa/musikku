@@ -28,3 +28,16 @@ data class QueueItem(
     val track: Track,
     val position: Int,
 )
+
+/** Adaptasi dari Zmusic (LyricsRepository) — lirik via LRCLIB/lrcmux, gratis & legal buat app pihak ketiga. */
+data class LyricLine(
+    val timeMs: Long,
+    val text: String,
+)
+
+data class Lyrics(
+    val plain: String,
+    val synced: List<LyricLine> = emptyList(),
+) {
+    val hasSynced: Boolean get() = synced.isNotEmpty()
+}
