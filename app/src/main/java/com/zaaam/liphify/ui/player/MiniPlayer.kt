@@ -41,7 +41,7 @@ fun MiniPlayer(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(model = cur.artwork, modifier = Modifier.size(44.dp), radius = 8.dp)
+            Artwork(model = cur.artwork, modifier = Modifier.size(46.dp), radius = 12.dp)
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(cur.title, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(cur.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)

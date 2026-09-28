@@ -44,7 +44,7 @@ import com.zaaam.liphify.ui.common.TrackRow
 import com.zaaam.liphify.ui.common.TrackSheet
 import com.zaaam.liphify.ui.player.PlaybackViewModel
 import com.zaaam.liphify.ui.playlist.PlaylistViewModel
-import com.zaaam.liphify.ui.theme.SurfaceSecondary
+import com.zaaam.liphify.ui.theme.glass
 import com.zaaam.liphify.ui.theme.TextSecondary
 
 @Composable
@@ -80,9 +80,8 @@ fun SearchScreen(
         LargeTitle("Search")
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceSecondary)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .glass(RoundedCornerShape(16.dp))
+                .padding(horizontal = 14.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("🔍 ", color = TextSecondary)
@@ -169,7 +168,7 @@ fun SearchScreen(
                         val track = vm.ytAsTrack(y)
                         TrackRow(
                             track = track,
-                            onPlay = { player.playTrack(track) },
+                            onPlay = { player.playTrack(track, s.yt.map { vm.ytAsTrack(it) }) },
                             onMenu = { menu = track },
                         )
                     }

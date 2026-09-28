@@ -60,20 +60,22 @@ fun Artwork(
     modifier: Modifier = Modifier,
     radius: Dp = 6.dp,
     fallbackIconSize: Dp = 22.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(radius),
 ) {
     if (model != null) {
         AsyncImage(
             model = model,
             contentDescription = null,
-            modifier = modifier.clip(RoundedCornerShape(radius)),
+            modifier = modifier.clip(shape),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             error = painterResource(R.drawable.ic_music_note),
             fallback = painterResource(R.drawable.ic_music_note),
         )
     } else {
         Box(
             modifier
-                .clip(RoundedCornerShape(radius))
-                .background(Color(0x2E000000)),
+                .clip(shape)
+                .background(Color(0x33FFFFFF)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -98,12 +100,12 @@ fun TrackRow(
         Row(
             Modifier.fillMaxWidth()
                 .combinedClickable(onClick = onPlay, onLongClick = onMenu)
-                .padding(vertical = 8.dp),
+                .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(model = track.artwork, modifier = Modifier.size(44.dp), radius = 6.dp)
+            Artwork(model = track.artwork, modifier = Modifier.size(54.dp), radius = 14.dp)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(track.title, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.title, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(subtitle, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = TextSecondary)
             }
             Icon(
@@ -113,7 +115,6 @@ fun TrackRow(
                 modifier = Modifier.clickable(onClick = onMenu).padding(8.dp),
             )
         }
-        HorizontalDivider(color = DividerColor)
     }
 }
 

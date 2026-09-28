@@ -267,49 +267,71 @@ class PlaybackViewModel @Inject constructor(
         _state.value = _state.value.copy(error = null)
     }
 
+    private var playJob: Job? = null
+
+    private fun item(t: Track, url: String) =
+        LiPhifySessionService.buildMediaItem(t.key, t.title, t.artist, t.artwork, url)
+
+    /**
+     * Mulai muter lagu yang diketuk LANGSUNG, sisa antrian di-resolve di belakang layar lalu
+     * ditempel berurutan (lanjutan di belakang, lagu sebelumnya di depan). Dulu semua URL
+     * di-resolve dulu baru mulai: lambat, dan URL YouTube di ujung antrian keburu basi.
+     */
     fun playTrack(track: Track, queue: List<Track> = listOf(track)) {
-        viewModelScope.launch {
-            val items = mutableListOf<MediaItem>()
-            val okQueue = mutableListOf<Track>()
-            var failed = 0
-            for (t in queue) {
-                val url = resolveUrl(t)
-                if (url == null) {
-                    failed++
-                    continue
-                }
-                items.add(LiPhifySessionService.buildMediaItem(t.key, t.title, t.artist, t.artwork, url))
-                okQueue.add(t)
-            }
-            if (items.isEmpty()) {
-                if (_state.value.error == null) {
-                    _state.value = _state.value.copy(error = "Semua lagu gagal dimuat, coba lagi")
-                }
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val list = if (queue.any { it.key == track.key }) queue else listOf(track) + queue
+            val firstUrl = resolveUrl(track)
+            if (firstUrl == null) {
+                if (_state.value.error == null) _state.value = _state.value.copy(error = "Lagu gagal dimuat, coba lagi")
                 return@launch
             }
-            val target = if (okQueue.any { it.key == track.key }) track else okQueue[0]
-            val startIndex = okQueue.indexOfFirst { it.key == target.key }.coerceAtLeast(0)
             withController { c ->
-                c.setMediaItems(items, startIndex, 0)
+                c.setMediaItems(listOf(item(track, firstUrl)), 0, 0)
                 c.prepare()
                 c.play()
             }
-            _state.value = _state.value.copy(queue = okQueue, current = target, error = null)
-            persistQueue(okQueue)
-            recordHistory(target)
-            if (failed > 0) {
-                _state.value = _state.value.copy(error = "$failed lagu dilewati (gagal dimuat)")
+            _state.value = _state.value.copy(queue = listOf(track), current = track, error = null)
+            recordHistory(track)
+            val at = list.indexOfFirst { it.key == track.key }
+            val before = mutableListOf<Track>()
+            val after = mutableListOf<Track>()
+            var failed = 0
+            for (t in list.drop(at + 1)) {
+                val url = resolveUrl(t)
+                if (url == null) { failed++; continue }
+                withController { c -> c.addMediaItem(item(t, url)) }
+                after.add(t)
+                _state.value = _state.value.copy(queue = before + track + after)
             }
+            for (t in list.take(at)) {
+                val url = resolveUrl(t)
+                if (url == null) { failed++; continue }
+                val pos = before.size
+                withController { c -> c.addMediaItem(pos, item(t, url)) }
+                before.add(t)
+                _state.value = _state.value.copy(queue = before + track + after)
+            }
+            persistQueue(before + track + after)
+            if (failed > 0) _state.value = _state.value.copy(error = "$failed lagu dilewati (gagal dimuat)")
+        }
+    }
+
+    /** Buang duplikat lagu yang sama dari playlist player (kecuali yang lagi diputar) biar state & player gak beda. */
+    private fun dropDuplicate(c: MediaController, key: String) {
+        for (i in c.mediaItemCount - 1 downTo 0) {
+            if (i != c.currentMediaItemIndex && c.getMediaItemAt(i).mediaId == key) c.removeMediaItem(i)
         }
     }
 
     fun playNext(track: Track) {
+        if (track.key == _state.value.current?.key) return
         viewModelScope.launch {
             val url = resolveUrl(track) ?: return@launch
-            val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
             withController { c ->
+                dropDuplicate(c, track.key)
                 val idx = if (c.mediaItemCount > 0) (c.currentMediaItemIndex + 1).coerceIn(0, c.mediaItemCount) else 0
-                c.addMediaItem(idx, item)
+                c.addMediaItem(idx, item(track, url))
             }
             val cur = _state.value.current
             val q = _state.value.queue.toMutableList()
@@ -322,16 +344,29 @@ class PlaybackViewModel @Inject constructor(
     }
 
     fun addToQueue(track: Track) {
+        if (track.key == _state.value.current?.key) return
         viewModelScope.launch {
             val url = resolveUrl(track) ?: return@launch
-            val item = LiPhifySessionService.buildMediaItem(track.key, track.title, track.artist, track.artwork, url)
-            withController { c -> c.addMediaItem(item) }
+            withController { c ->
+                dropDuplicate(c, track.key)
+                c.addMediaItem(item(track, url))
+            }
             val q = _state.value.queue.toMutableList()
             q.removeAll { it.key == track.key }
             q.add(track)
             _state.value = _state.value.copy(queue = q)
             persistQueue(q)
         }
+    }
+
+    /** Hapus satu lagu dari antrian (lagu yang lagi diputar gak bisa dihapus). */
+    fun removeFromQueue(index: Int) {
+        val q = _state.value.queue
+        if (index !in q.indices || q[index].key == _state.value.current?.key) return
+        withController { c -> if (index < c.mediaItemCount && c.getMediaItemAt(index).mediaId == q[index].key) c.removeMediaItem(index) }
+        val next = q.toMutableList().also { it.removeAt(index) }
+        _state.value = _state.value.copy(queue = next)
+        viewModelScope.launch(Dispatchers.IO) { persistQueue(next) }
     }
 
     fun moveQueue(from: Int, to: Int) {

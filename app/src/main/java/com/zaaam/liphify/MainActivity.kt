@@ -101,8 +101,9 @@ fun LiPhifyScaffold(
     val snack = remember { SnackbarHostState() }
     val hazeState = remember { HazeState() }
 
+    com.zaaam.liphify.ui.theme.AmbientBackground(Modifier.fillMaxSize()) {
     Scaffold(
-        containerColor = com.zaaam.liphify.ui.theme.BgMain,
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp)) {
@@ -118,9 +119,9 @@ fun LiPhifyScaffold(
                     ),
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF2C2C2E).copy(alpha = 0.55f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color(0xFF2C2C2E).copy(alpha = 0.50f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, com.zaaam.liphify.ui.theme.GlassRim),
                         modifier = Modifier.padding(bottom = 8.dp).hazeChild(
                             state = hazeState,
                             style = HazeDefaults.style(
@@ -139,8 +140,8 @@ fun LiPhifyScaffold(
                 }
                 Surface(
                     shape = RoundedCornerShape(26.dp),
-                    color = Color(0xFF1C1C1E).copy(alpha = 0.55f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    color = Color(0xFF1C1C1E).copy(alpha = 0.50f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, com.zaaam.liphify.ui.theme.GlassRim),
                     modifier = Modifier.hazeChild(
                         state = hazeState,
                         style = HazeDefaults.style(
@@ -262,6 +263,7 @@ fun LiPhifyScaffold(
                 )
             }
         }
+    }
     }
 }
 

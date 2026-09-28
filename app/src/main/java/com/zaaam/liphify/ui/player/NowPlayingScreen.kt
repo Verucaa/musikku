@@ -289,7 +289,7 @@ fun NowPlayingScreen(
                     androidx.compose.material3.ModalBottomSheet(
                         onDismissRequest = { player.toggleQueue(false) },
                         dragHandle = null,
-                        containerColor = Color(0xFF1C1C1E),
+                        containerColor = Color(0xFF1C1C1E).copy(alpha = 0.92f),
                     ) {
                         QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
                     }
@@ -297,7 +297,7 @@ fun NowPlayingScreen(
                 if (showLyrics) {
                     androidx.compose.material3.ModalBottomSheet(
                         onDismissRequest = { showLyrics = false },
-                        containerColor = Color(0xFF1C1C1E),
+                        containerColor = Color(0xFF1C1C1E).copy(alpha = 0.92f),
                     ) {
                         LyricsPanel(lyricsState = lyricsState, positionMs = state.positionMs)
                     }

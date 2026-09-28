@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
+import com.zaaam.liphify.ui.theme.glass
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueueMusic
@@ -158,7 +159,7 @@ fun LibraryScreen(
                 LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     item { LargeTitle("Library", modifier = Modifier.padding(vertical = 6.dp)) }
                     item {
-                        Column {
+                        Column(Modifier.glass(com.zaaam.liphify.ui.theme.GlassShapeLg).padding(horizontal = 12.dp)) {
                             CatRow(Icons.Filled.Favorite, "Favorit") {
                                 pls.find { it.name == "Favorit" }?.let { go(LibView.Playlist(it.id, it.name)) } ?: go(LibView.Playlists)
                             }

@@ -6,6 +6,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.graphicsLayer
+import com.zaaam.liphify.ui.theme.glass
+import com.zaaam.liphify.ui.theme.GlassShapeLg
+import com.zaaam.liphify.ui.theme.GlassRim
+import com.zaaam.liphify.ui.theme.ArchShape
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,133 +120,126 @@ fun HomeScreen(
         }
     }
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item { LargeTitle("Home") }
-        item {
-            Text(greeting, Modifier.padding(start = 16.dp, bottom = 4.dp), color = TextSecondary, fontSize = 14.sp)
-        }
+        item { Text(greeting, Modifier.padding(start = 16.dp, bottom = 8.dp), color = TextSecondary, fontSize = 14.sp) }
+        // 1) Hero: lanjut dari lagu terakhir — kartu kaca dengan artwork sebagai backdrop.
         if (s.recent.isNotEmpty()) {
             item {
                 val last = s.recent.first()
-                Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF3A2F5A), Color(0xFF1C1C1E))))
-                        .clickable { player.playTrack(last, s.recent) }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Box(
+                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().glass(GlassShapeLg)
+                        .clickable { player.playTrack(last, s.recent) },
                 ) {
-                    Artwork(model = last.artwork, modifier = Modifier.size(64.dp), radius = 12.dp)
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("Lanjut Dengerin", fontSize = 12.sp, color = TextSecondary)
-                        Text(last.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
-                        Text(last.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, color = TextSecondary)
-                    }
-                    Box(
-                        Modifier.size(40.dp).clip(CircleShape).background(Color.White)
-                            .clickable { player.playTrack(last, s.recent) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = "Putar", tint = Color.Black)
+                    Artwork(
+                        model = last.artwork,
+                        modifier = Modifier.matchParentSize().blur(28.dp).graphicsLayer(alpha = 0.35f),
+                        radius = 0.dp,
+                    )
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Artwork(model = last.artwork, modifier = Modifier.size(92.dp), radius = 26.dp)
+                        Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                            Text("LANJUT DENGERIN", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+                            Text(last.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                            Text(last.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, color = TextSecondary)
+                        }
+                        Box(
+                            Modifier.size(48.dp).clip(CircleShape).background(Accent).clickable { player.playTrack(last, s.recent) },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(Icons.Filled.PlayArrow, contentDescription = "Putar", tint = Color.White) }
                     }
                 }
             }
         }
         item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickChip("Favorit", Icons.Filled.Favorite, onOpenFavorit)
                 QuickChip("Jelajah", Icons.Filled.Explore, onOpenBrowse)
                 QuickChip("Cari", Icons.Filled.Search, onOpenSearch)
             }
         }
-        item {
-            Text("Trending", Modifier.padding(start = 16.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
+        // 2) Trending: kartu fitur lebar + kartu kotak yang naik-turun (staggered).
+        item { SectionTitle("Trending") }
         when {
-            s.trendingLoading && s.trending.isEmpty() -> {
-                item {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        Text("Memuat trending…", Modifier.padding(start = 12.dp), color = TextSecondary)
-                    }
+            s.trendingLoading && s.trending.isEmpty() -> item {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Text("Memuat trending…", Modifier.padding(start = 12.dp), color = TextSecondary)
                 }
             }
-            s.trendingError != null && s.trending.isEmpty() -> {
-                item {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("Gagal ambil data dari YouTube, coba lagi", color = TextSecondary)
-                        Button(onClick = { vm.retryTrending() }, modifier = Modifier.padding(top = 8.dp)) {
-                            Text("Coba lagi")
-                        }
-                    }
+            s.trendingError != null && s.trending.isEmpty() -> item {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Gagal ambil data dari YouTube, coba lagi", color = TextSecondary)
+                    Button(onClick = { vm.retryTrending() }, modifier = Modifier.padding(top = 8.dp)) { Text("Coba lagi") }
                 }
             }
             s.trending.isNotEmpty() -> {
                 item {
                     LazyRow(Modifier.padding(vertical = 8.dp)) {
-                        items(s.trending, key = { it.key }) { t -> MediaCard(t) { player.playTrack(t, s.trending) } }
+                        itemsIndexed(s.trending, key = { _, t -> t.key }) { i, t ->
+                            if (i == 0) FeatureCard(t) { player.playTrack(t, s.trending) }
+                            else MediaCard(t, Modifier.padding(top = if (i % 2 == 0) 0.dp else 24.dp)) { player.playTrack(t, s.trending) }
+                        }
                     }
                 }
-                item {
-                    Text("Artis Terpopuler", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
+                // 3) Artis: bentuk arch (bukan lingkaran/kotak biasa) — identitas visual LiPhify.
+                item { SectionTitle("Artis Terpopuler") }
                 item {
                     LazyRow(Modifier.padding(vertical = 8.dp)) {
-                        // Diturunin dari data Trending yang nyata; tap = cari artisnya.
                         items(s.trending.distinctBy { it.artist }.take(8), key = { it.artist }) { t ->
                             Column(
-                                Modifier.padding(start = 16.dp).width(80.dp).clickable { onGenre(t.artist) },
+                                Modifier.padding(start = 16.dp).width(96.dp).clickable { onGenre(t.artist) },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Artwork(model = t.artwork, modifier = Modifier.size(76.dp), radius = 38.dp, fallbackIconSize = 32.dp)
-                                Text(t.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                                Artwork(
+                                    model = t.artwork,
+                                    modifier = Modifier.size(width = 96.dp, height = 124.dp).border(1.dp, GlassRim, ArchShape),
+                                    shape = ArchShape,
+                                    fallbackIconSize = 32.dp,
+                                )
+                                Text(t.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                             }
                         }
                     }
                 }
             }
         }
+        // 4) Aktivitas: statistik nyata dari data app.
         item {
-            Text("Browse", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatTile("Riwayat", s.recent.size.toString(), Modifier.weight(1f))
+                StatTile("Di perangkat", lib.songCount.toString(), Modifier.weight(1f))
+                StatTile("Favorit", favKeys.size.toString(), Modifier.weight(1f))
+            }
         }
+        item { SectionTitle("Browse") }
         item {
             LazyRow(Modifier.padding(vertical = 8.dp)) {
                 items(GENRES) { (name, colors) ->
-                    Box(Modifier.padding(start = 16.dp).width(160.dp)) {
-                        GenreTile(name, colors) { onGenre(name) }
+                    Box(Modifier.padding(start = 10.dp).width(168.dp)) { GenreTile(name, colors) { onGenre(name) } }
+                }
+            }
+        }
+        item { SectionTitle("Recently Played") }
+        if (s.recent.isEmpty()) {
+            item { Text("Belum ada riwayat, mulai putar musik dari Library", Modifier.padding(16.dp), color = TextSecondary) }
+        } else {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().glass(GlassShapeLg).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    s.recent.take(5).forEach { t ->
+                        TrackRow(track = t, onPlay = { player.playTrack(t, s.recent) }, onMenu = { menu = t })
                     }
                 }
             }
         }
-        item {
-            Text("Recently Played", Modifier.padding(start = 16.dp, top = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-        if (s.recent.isEmpty()) {
-            item {
-                Text(
-                    "Belum ada riwayat, mulai putar musik dari Library",
-                    Modifier.padding(16.dp),
-                    color = TextSecondary,
-                )
-            }
-        } else {
-            items(s.recent.take(5), key = { it.key }) { t ->
-                Box(Modifier.padding(horizontal = 16.dp)) {
-                    TrackRow(track = t, onPlay = { player.playTrack(t, s.recent) }, onMenu = { menu = t })
-                }
-            }
-        }
-        item {
-            Text("Recently Added", Modifier.padding(start = 16.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
+        item { SectionTitle("Recently Added") }
         if (s.newMusic.isEmpty()) {
             item {
                 ScanEmptyState(
                     scanning = lib.scanning,
                     needsPermission = lib.needsPermission,
                     onScan = { if (libVm.hasPermission()) libVm.scan() else launcher.launch(allPerms) },
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         } else {
@@ -244,6 +248,12 @@ fun HomeScreen(
                     items(s.newMusic, key = { it.key }) { t -> MediaCard(t) { player.playTrack(t, s.newMusic) } }
                 }
             }
+        }
+        // 5) Koleksi: kolase artwork bentuk campur dari semua lagu yang ada.
+        val collage = (s.trending + s.recent + s.newMusic).filter { it.artwork != null }.distinctBy { it.artwork }.take(6)
+        if (collage.size >= 3) {
+            item { SectionTitle("Koleksi") }
+            item { ArtMosaic(collage) { player.playTrack(it, collage) } }
         }
     }
     TrackSheet(
@@ -260,22 +270,76 @@ fun HomeScreen(
 }
 
 @Composable
+private fun SectionTitle(text: String) {
+    Text(text, Modifier.padding(start = 16.dp, top = 14.dp), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+}
+
+@Composable
 private fun QuickChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(22.dp)).background(Color(0xFF1C1C1E)).clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+        Modifier.glass(RoundedCornerShape(24.dp)).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
-        Text(label, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp))
     }
 }
 
 @Composable
-private fun MediaCard(t: Track, onClick: () -> Unit) {
-    Column(Modifier.padding(start = 16.dp).width(148.dp).clickable(onClick = onClick)) {
-        Artwork(model = t.artwork, modifier = Modifier.size(148.dp), radius = 12.dp, fallbackIconSize = 48.dp)
-        Text(t.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier.glass(RoundedCornerShape(20.dp)).padding(vertical = 12.dp, horizontal = 14.dp)) {
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(label, fontSize = 12.sp, color = TextSecondary)
+    }
+}
+
+/** Kartu fitur lebar: artwork penuh + scrim + judul di atasnya. */
+@Composable
+private fun FeatureCard(t: Track, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(30.dp)
+    Box(Modifier.padding(start = 16.dp).size(width = 280.dp, height = 190.dp).clip(shape).border(1.dp, GlassRim, shape).clickable(onClick = onClick)) {
+        Artwork(model = t.artwork, modifier = Modifier.fillMaxSize(), shape = shape, fallbackIconSize = 56.dp)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
+        Text("#1 TRENDING", Modifier.align(Alignment.TopStart).padding(14.dp).glass(RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+            Text(t.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(t.artist, fontSize = 13.sp, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun MediaCard(t: Track, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    Column(modifier.padding(start = 14.dp).width(148.dp).clickable(onClick = onClick)) {
+        Artwork(model = t.artwork, modifier = Modifier.size(148.dp).border(1.dp, GlassRim, shape), shape = shape, fallbackIconSize = 48.dp)
+        Text(t.title, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun ArtMosaic(tracks: List<Track>, onClick: (Track) -> Unit) {
+    fun t(i: Int) = tracks[i % tracks.size]
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1.15f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MosaicTile(t(0), Modifier.fillMaxWidth().aspectRatio(1f), RoundedCornerShape(36.dp), onClick)
+            MosaicTile(t(1), Modifier.fillMaxWidth().aspectRatio(1.6f), RoundedCornerShape(22.dp), onClick)
+            MosaicTile(t(2), Modifier.fillMaxWidth().aspectRatio(1f), RoundedCornerShape(topStart = 64.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 22.dp), onClick)
+        }
+        Column(Modifier.weight(1f).padding(top = 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MosaicTile(t(3), Modifier.fillMaxWidth().aspectRatio(0.78f), ArchShape, onClick)
+            MosaicTile(t(4), Modifier.fillMaxWidth().aspectRatio(1f), RoundedCornerShape(26.dp), onClick)
+            MosaicTile(t(5), Modifier.fillMaxWidth().aspectRatio(1.3f), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomEnd = 22.dp, bottomStart = 56.dp), onClick)
+        }
+    }
+}
+
+@Composable
+private fun MosaicTile(t: Track, modifier: Modifier, shape: androidx.compose.ui.graphics.Shape, onClick: (Track) -> Unit) {
+    Box(modifier.clip(shape).border(1.dp, GlassRim, shape).clickable { onClick(t) }) {
+        Artwork(model = t.artwork, modifier = Modifier.fillMaxSize(), shape = shape)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f))))
+        Text(t.title, Modifier.align(Alignment.BottomStart).padding(12.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }

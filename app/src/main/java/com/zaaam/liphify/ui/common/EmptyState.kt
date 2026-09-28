@@ -20,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zaaam.liphify.ui.theme.GlassShapeLg
 import com.zaaam.liphify.ui.theme.TextSecondary
+import com.zaaam.liphify.ui.theme.glass
 
 /** Empty state "belum ada lagu lokal" — tombolnya memicu pemindaian beneran (bukan hiasan). */
 @Composable
@@ -31,7 +33,7 @@ fun ScanEmptyState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1C1C1E)).padding(22.dp),
+        modifier.fillMaxWidth().glass(GlassShapeLg).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(Icons.Filled.LibraryMusic, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(34.dp))
