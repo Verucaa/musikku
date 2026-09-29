@@ -19,7 +19,7 @@ tiap push lewat GitHub Actions.
 | 🔍 Unified search | Lokal (instant) + YouTube (async), scope Semua/Perangkat/YouTube |
 | ▶️ Satu engine | Media3 untuk semua sumber; URL YouTube di-resolve ulang tiap play |
 | 📃 Queue + playlist | Campur lokal & YouTube, persist restart, Favorit via ☆ |
-| 💬 Lirik synced | LRCLIB, highlight ikut posisi lagu (PRD-101 ✅) |
+| 💬 Lirik synced | LRCLIB, highlight ikut posisi lagu |
 | 🌃 Liquid Glass | Haze blur, rim-light, motion `pressable`/`appear` |
 
 ## 🚀 Mulai 5 menit
@@ -59,9 +59,11 @@ ui/ → ViewModel → repository → Room / NewPipeExtractor (via data/youtube S
 ```text
 app/src/main/java/com/zaaam/liphify/
 ├── MainActivity.kt     # tab Home/New/Library + search, Haze, BackHandler
-├── playback/           # MediaSessionService  domain/  # Track, PlaybackSource
+├── LiPhifyApp.kt       # Hilt + NewPipe.init
+├── playback/           # LiPhifySessionService (Media3, ExoPlayer)
+├── domain/model/       # Track, PlaybackSource(Local|YouTube), Lyrics
 ├── data/local/         # Room v4 + scanner folder-scoped + migrasi 1→4
-├── data/youtube/       # SATU-SATUNYA pemanggil NewPipe
+├── data/youtube/       # SATU-SATUNYA pemanggil NewPipeExtractor
 ├── data/…Repository    # MusicRepository, LyricsRepository
 └── ui/ theme|common|home|browse|library|search|playlist|player|nav/
 ```

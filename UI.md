@@ -1,14 +1,12 @@
 # UI.md — Spesifikasi UI LiPhify per-inci (untuk implementasi manual)
 
-Acuan kebenaran berlapis: (1) 3 screenshot RESMI Apple Music iOS di
-`/tmp/opencode/amshots/` (`library.png`, `nowplaying.png`, `queue.png` —
-light mode, 390pt, 9:41 — dibaca piksel per piksel), (2) riset tab
-Home/Search/New dari support.apple.com + teardown, (3) `mockup/index.html`
-(dark-mode yang disetujui user). App = dark-only; angka warna di bawah
+Acuan kebenaran berlapis: (1) 3 screenshot RESMI Apple Music iOS
+(dibaca piksel per piksel saat perancangan), (2) riset tab
+Home/Search/New dari support.apple.com + teardown, (3) mockup HTML yang
+disetujui user (file mockup sudah dihapus setelah polanya masuk app). App = dark-only; angka warna di bawah
 sudah dikonversi ke dark (terang→gelap: bg `#FFF`→`#000`, teks `#000`→`#fff`).
 
-Satuan: pt iOS ≈ dp Android ≈ px mockup 1:1. Lebar acuan 390 (mockup 430,
-proporsional sama).
+Satuan: pt iOS ≈ dp Android ≈ px 1:1. Lebar acuan 390.
 
 ---
 
@@ -39,8 +37,8 @@ tab bar + mini-player radius 24 di atas bg `rgba(255,255,255,0.10)`;
 `hazeChild` WAJIB `backgroundColor` eksplisit (tanpa itu = crash
 `IllegalArgumentException`, sudah kejadian 3x).
 
-Aturan anti-dummy (`design.md` §0, berlaku per komponen di bawah):
-tidak ada list/string hardcoded di UI final kecuali `// STATIC PER PRD-007`;
+Aturan anti-dummy (berlaku per komponen di bawah):
+tidak ada list/string hardcoded di UI final;
 tidak ada tombol no-op (tidak ada fungsi = hapus, kecuali P1 dengan
 disabled + pesan jujur: lirik, EQ, sleep timer).
 
@@ -48,7 +46,7 @@ disabled + pesan jujur: lirik, EQ, sleep timer).
 
 ## 1. Kerangka global (`MainActivity.kt`)
 
-1. Status bar = sistem (jangan gambar manual; mockup `.status` hanya pajangan).
+1. Status bar = sistem (jangan gambar manual).
 2. `Scaffold(containerColor=BgMain)`, konten `padding(pad)`.
 3. Bottom = `Column(windowInsetsPadding(navigationBars), horiz 10)`:
    - Mini-player (ada作文 bila `current != null`, §5) + jarak 8.
@@ -196,7 +194,7 @@ Urutan vertikal (padding horizontal 20, kecuali artwork):
    Key stabil `track.key` (bukan index).
 5. `＋ Add Songs` → tutup NP + buka Search (navigasi nyata).
 6. `Tutup`. Panel inline max 260dp (darurat overflow); target akhir =
-   bottom-sheet + scrim (backlog, `design.md` §motion).
+   bottom-sheet + scrim (backlog motion).
 
 ---
 
@@ -234,7 +232,7 @@ Urutan vertikal (padding horizontal 20, kecuali artwork):
 
 ---
 
-## 10. Fitur perilaku Apple yang WAJIB ada (mapping PRD)
+## 10. Fitur perilaku Apple yang WAJIB ada
 
 | Fitur Apple | Status LiPhify | File |
 |---|---|---|

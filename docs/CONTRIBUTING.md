@@ -8,7 +8,7 @@
 
 ## Aturan kode (BLOCKING secara sosial)
 
-1. **Anti-dummy** (`design.md` dulu, semangatnya tetap): tidak ada list
+1. **Anti-dummy** (semangat dokumen desain awal): tidak ada list
    hardcoded di UI final; tidak ada tombol no-op — tidak ada fungsi =
    hapus, kecuali backlog P1 dengan disabled + pesan jujur.
 2. **Ponytail**: YAGNI dulu → stdlib/platform sebelum kode sendiri →
@@ -25,7 +25,7 @@
 ## Checklist sebelum push
 
 - [ ] Build lokal sync OK (atau serahkan ke CI, tapi baca lognya bila merah)
-- [ ] Tidak ada string/angka hardcoded di UI (kecuali `// STATIC PER PRD-007`)
+- [ ] Tidak ada string/angka hardcoded di UI final
 - [ ] Semua tombol manggil sesuatu yang nyata
 - [ ] Layar kecil tidak overflow; rotasi tidak reset state penting
 - [ ] Izin baru = deklarasi manifest + request runtime + alasan di UI

@@ -49,8 +49,8 @@ flowchart TD
 - **DB v4**, migrasi eksplisit 1→2→3→4, **tanpa destructive-upgrade**.
   Tabel: `tracks` (library), `yt_cache`, `playlists` + `playlist_tracks`,
   `history`, `queue`. Playlist "Favorit" otomatis = backend tombol ☆.
-- **Lirik**: `LyricsRepository` (LRCLIB) → `LyricsState`
-  (Idle/Loading/Success/NotFound) → panel synced-highlight.
+- **Lirik**: `LyricsRepository` (LRCLIB) → `PlaybackViewModel.loadLyrics()`
+  → `LyricsState` (Idle/Loading/Success/NotFound) → panel synced-highlight.
 
 ## Batas NewPipe (rapuh by design)
 
