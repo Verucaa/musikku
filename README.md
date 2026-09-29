@@ -1,83 +1,85 @@
-# LiPhify — `com.zaaam.liphify`
+# 🎵 LiPhify — `com.zaaam.liphify`
 
-Player musik hybrid: lagu lokal (khusus folder `Music/LiPhify`) + streaming
-YouTube Music (NewPipeExtractor), UI ala Apple Music. Sideload pribadi,
-rilis otomatis via GitHub Actions.
+[![build-release](https://github.com/az925-crypto/Liphify-/actions/workflows/build-release.yml/badge.svg)](https://github.com/az925-crypto/Liphify-/actions/workflows/build-release.yml)
+![minSdk 33](https://img.shields.io/badge/minSdk-33-blue)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0-purple)
+![Compose](https://img.shields.io/badge/Compose-Material3-orange)
+![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-red)
 
-## Stack 30 detik
+Player musik hybrid ala Apple Music: **lagu lokal + trending & streaming
+YouTube Music dalam satu app, satu UI.** Sideload pribadi — rilis otomatis
+tiap push lewat GitHub Actions.
 
-Kotlin 2.0 + Compose Material3 + Media3 1.9 + Room 4 + Hilt + NewPipeExtractor
-v0.26.5 + Coil + Haze. Single-module. `minSdk 33`, `compile/target 35`.
-Detail versi: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+## ✨ Fitur
 
-## Mulai dalam 5 menit
+| | |
+|---|---|
+| 📁 Library folder-scoped | Scan **hanya** `Music/LiPhify` — ringtone & suara WA tidak ikut |
+| 🔥 Trending di Home | Kiosk Trending YouTube → fallback query, selalu ada isi |
+| 🔍 Unified search | Lokal (instant) + YouTube (async), scope Semua/Perangkat/YouTube |
+| ▶️ Satu engine | Media3 untuk semua sumber; URL YouTube di-resolve ulang tiap play |
+| 📃 Queue + playlist | Campur lokal & YouTube, persist restart, Favorit via ☆ |
+| 💬 Lirik synced | LRCLIB, highlight ikut posisi lagu (PRD-101 ✅) |
+| 🌃 Liquid Glass | Haze blur, rim-light, motion `pressable`/`appear` |
+
+## 🚀 Mulai 5 menit
 
 ```sh
 git clone https://github.com/az925-crypto/Liphify-.git
-# buka di Android Studio, sync, Run ▶ (debug)
+# Android Studio → sync → Run ▶
 ```
 
-Yang perlu tahu sebelum ngoding:
+1. Taruh MP3 di `Music/LiPhify` → tab Library → **Refresh**
+2. Tab Home langsung hidup dari Trending (butuh internet)
+3. Ketuk lagu → mini-player → geser ke atas → Now Playing
 
-1. **Library = 1 folder.** Scan hanya baca `Music/LiPhify`
-   (`RELATIVE_PATH LIKE`, bukan seluruh storage). Taruh MP3 di situ → tab
-   Library → Refresh. Filter: bukan ringtone/notif, ≥30 dtk, ≥50KB.
-2. **Home hidup dari network.** Section Trending = kiosk Trending YouTube →
-   fallback 3 query. Offline = pesan + retry, bukan crash.
-3. **Satu engine putar.** Lokal & YouTube lewat `MediaController` +
-   `LiPhifySessionService`. URL YouTube basi → resolve ulang tiap play,
-   jangan cache URL.
-4. **Aturan UI.** Lihat [`UI.md`](UI.md) (spesifikasi per-inci) dan
-   [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) (aturan anti-dummy +
-   ponytail).
+> Home kosong? Baca [Troubleshooting](#-troubleshooting) dulu sebelum
+> buka issue.
 
-## Build & rilis (jangan build di HP)
+## 📦 Ambil APK (jangan build di HP)
 
-```sh
-git push origin main
-# → Actions: assembleRelease → sign → publish ke Release v1.0.0 (otomatis)
-# → ambil APK LiPhify-v1.0.0-<commit>-signed.apk di tab Release
+1. Push ke `main` → Actions build + sign + publish **otomatis**
+2. Tab **Release** → `LiPhify-v1.0.0-<commit>-signed.apk` (selalu 1 file terbaru)
+3. Install via LADB / transfer file ke OPPO A60
+
+Signing dari Secrets. Tanpa secrets = unsigned = tidak bisa diinstal.
+
+## 🛠 Stack
+
+Kotlin 2.0 · Compose M3 · Media3 1.9 · Room v4 · Hilt · NewPipeExtractor
+v0.26.5 · Coil · Haze · LRCLIB — single-module, `minSdk 33`, `target 35`.
+
+```text
+ui/ → ViewModel → repository → Room / NewPipeExtractor (via data/youtube SAJA)
+              ↘ MediaController → LiPhifySessionService (ExoPlayer)
 ```
 
-- Signing dari Secrets (`KEYSTORE_B64/PASSWORD/ALIAS`). Tanpa secrets = unsigned.
-- Push berisi **hanya `.md`** tidak trigger build (`paths-ignore`).
-- Keystore fisik cuma ada di Secrets — backup di tempat aman, hilang =
-  ganti signature = install ulang.
-
-## Peta project
+## 🗺 Peta
 
 ```text
 app/src/main/java/com/zaaam/liphify/
-├── MainActivity.kt          # scaffold: tab Home/New/Library + search, Haze, BackHandler
-├── LiPhifyApp.kt            # Hilt + NewPipe.init
-├── playback/                # LiPhifySessionService (Media3)
-├── domain/model/            # Track, PlaybackSource(Local|YouTube), Lyrics
-├── data/
-│   ├── local/               # Room v4 + MediaStoreScanner (folder-scoped) + migrasi 1→4
-│   ├── youtube/             # SATU-SATUNYA pemanggil NewPipeExtractor + OkHttpDownloader
-│   ├── repository/          # MusicRepository (unified search)
-│   └── LyricsRepository.kt  # LRCLIB (PRD-101)
-├── di/                      # DatabaseModule
-└── ui/
-    ├── theme/               # Theme (Inter) + Glass.kt + Motion.kt (pressable/appear)
-    ├── common/              # TrackRow, Artwork+fallback, TrackSheet, Genres, EmptyState
-    ├── home|browse|library|search|playlist|player|nav/
-app/src/main/res/            # font Inter, ikon launcher, ic_music_note
-.github/workflows/           # build-release.yml (build+sign+publish+bersih asset)
+├── MainActivity.kt     # tab Home/New/Library + search, Haze, BackHandler
+├── playback/           # MediaSessionService  domain/  # Track, PlaybackSource
+├── data/local/         # Room v4 + scanner folder-scoped + migrasi 1→4
+├── data/youtube/       # SATU-SATUNYA pemanggil NewPipe
+├── data/…Repository    # MusicRepository, LyricsRepository
+└── ui/ theme|common|home|browse|library|search|playlist|player|nav/
 ```
 
-## Keputusan yang jangan dibalik diam-diam
+## 🧭 Keputusan final (jangan dibalik diam-diam)
 
-| Keputusan | Alasan |
-|---|---|
-| Scan cuma `Music/LiPhify` | `IS_MUSIC` OEM tidak可 dipercaya (ringtone ikut) |
-| Tanpa BOM Media3, pin `1.9.0` | artefak BOM tidak ada di repo |
-| `compile/target 35` | syarat mutlak media3 1.9.0 |
-| Tanpa Radio/Download/Login/Auto | di luar scope v1, UI-nya dilarang ada |
-| GPL-3.0 (NewPipe) | repo publik → source ikut copyleft |
+Scan cuma `Music/LiPhify` · Media3 tanpa BOM pin `1.9.0` · target 35 ·
+tanpa Radio/Download/Login · repo publik = ikut copyleft **GPL-3.0**.
 
-## Dokumen
+## 🐞 Troubleshooting
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — lapisan, alur playback, DB & migrasi, batas NewPipe
-- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — cara kontribusi, aturan kode, checklist push
-- [`UI.md`](UI.md) — spesifikasi UI per-inci + checklist terima per layar
+| Gejala | Penyebab paling mungkin | Fix |
+|---|---|---|
+| Home kosong | DB kosong (scan 0) / offline | `Music/LiPhify` ada isinya? Refresh → cek `scan: N lagu` |
+| Force close | Lihat log dulu | `adb logcat -d \| grep -A25 'FATAL EXCEPTION: main'` |
+| Lagu tidak bunyi | URL basi / file hilang | Tap lagi (auto re-resolve); scan ulang bila file pindah |
+| Tidak bisa install | APK unsigned | Pastikan Secrets keystore terisi |
+
+## 📚 Dokumen
+
+[**ARCHITECTURE**](docs/ARCHITECTURE.md) · [**CONTRIBUTING**](docs/CONTRIBUTING.md) · [**UI.md**](UI.md)
