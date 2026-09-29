@@ -80,6 +80,12 @@ tanpa Radio/Download/Login · repo publik = ikut copyleft **GPL-3.0**.
 | Lagu tidak bunyi | URL basi / file hilang | Tap lagi (auto re-resolve); scan ulang bila file pindah |
 | Tidak bisa install | APK unsigned | Pastikan Secrets keystore terisi |
 
+## 📄 Lisensi
+
+**GPL-3.0** — file [`LICENSE`](LICENSE). Karena pakai NewPipeExtractor
+(GPL), source repo publik ini ikut copyleft: bebas dipakai/dimodifikasi,
+wajib tetap terbuka. Klaim sebagai karya tertutup = pelanggaran lisensi.
+
 ## 📚 Dokumen
 
 [**ARCHITECTURE**](docs/ARCHITECTURE.md) · [**CONTRIBUTING**](docs/CONTRIBUTING.md) · [**UI.md**](UI.md)
