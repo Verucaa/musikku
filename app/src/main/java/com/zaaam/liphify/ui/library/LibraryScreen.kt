@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import com.zaaam.liphify.ui.theme.glass
+import com.zaaam.liphify.ui.theme.pressable
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueueMusic
@@ -256,7 +257,7 @@ fun LibraryScreen(
 @Composable
 private fun CatRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().pressable(onClick = onClick, pressedScale = 0.985f).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             // Glyph polos ala Apple Music (tanpa kotak).
             Icon(icon, contentDescription = null, tint = com.zaaam.liphify.ui.theme.Accent, modifier = Modifier.width(34.dp).size(22.dp))
             Text(label, Modifier.weight(1f), fontSize = 17.sp)

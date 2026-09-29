@@ -3,6 +3,9 @@ package com.zaaam.liphify.ui.player
 import android.media.AudioManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import com.zaaam.liphify.ui.theme.glass
+import com.zaaam.liphify.ui.theme.appear
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -148,7 +151,7 @@ fun NowPlayingScreen(
             // Drag handle ala Apple + tombol tutup.
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { player.setExpanded(false) }) {
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Tutup")
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Tutup", tint = Color.White)
                 }
                 Spacer(Modifier.weight(1f))
                 Box(
@@ -158,16 +161,16 @@ fun NowPlayingScreen(
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { if (cur != null) menu = cur }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Menu lagu")
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Menu lagu", tint = Color.White)
                 }
             }
             if (cur != null) {
                 // Artwork full-bleed (tanpa kartu) seperti Apple Music.
                 if (cur.artwork != null) {
-                    AsyncImage(
+                    Artwork(
                         model = cur.artwork,
-                        contentDescription = null,
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                        radius = 0.dp,
                     )
                 } else {
                     Box(
@@ -186,11 +189,20 @@ fun NowPlayingScreen(
                         Text(cur.title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
                         Text(cur.artist, fontSize = 19.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee())
                     }
+                    val heartScale by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (isFav) 1.18f else 1f,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioHighBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+                        ),
+                        label = "heartPop",
+                    )
                     IconButton(onClick = { player.let { plVm.toggleFavorite(cur) } }) {
                         Icon(
                             if (isFav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                             contentDescription = if (isFav) "Hapus dari Favorit" else "Tambah ke Favorit",
                             tint = if (isFav) Accent else Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale },
                         )
                     }
                 }
@@ -218,17 +230,24 @@ fun NowPlayingScreen(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(16.dp))
                     IconButton(onClick = { player.prev() }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.SkipPrevious, contentDescription = "Prev", modifier = Modifier.size(38.dp))
+                        Icon(Icons.Filled.SkipPrevious, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(38.dp))
                     }
                     IconButton(onClick = { player.togglePlayPause() }, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = "Play",
-                            modifier = Modifier.size(72.dp),
-                        )
+                        androidx.compose.animation.Crossfade(
+                            targetState = state.isPlaying,
+                            animationSpec = androidx.compose.animation.core.tween(200),
+                            label = "npPlayPause",
+                        ) { playing ->
+                            Icon(
+                                if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = if (playing) "Jeda" else "Putar",
+                                tint = Color.White,
+                                modifier = Modifier.size(72.dp),
+                            )
+                        }
                     }
                     IconButton(onClick = { player.next() }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.SkipNext, contentDescription = "Next", modifier = Modifier.size(38.dp))
+                        Icon(Icons.Filled.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(38.dp))
                     }
                     Spacer(Modifier.width(16.dp))
                 }
@@ -281,25 +300,24 @@ fun NowPlayingScreen(
                     }
                     Spacer(Modifier.width(24.dp))
                     IconButton(onClick = { player.toggleQueue() }) {
-                        Icon(Icons.Filled.QueueMusic, contentDescription = "Queue")
+                        Icon(Icons.Filled.QueueMusic, contentDescription = "Queue", tint = Color.White.copy(alpha = 0.8f))
                     }
                     Spacer(Modifier.weight(1f))
                 }
                 if (state.showQueue) {
-                    androidx.compose.material3.ModalBottomSheet(
-                        onDismissRequest = { player.toggleQueue(false) },
-                        dragHandle = null,
-                        containerColor = Color(0xFF1C1C1E).copy(alpha = 0.92f),
-                    ) {
+                    GlassSheet(artwork = cur.artwork, onDismiss = { player.toggleQueue(false) }) {
                         QueuePanel(state = state, player = player, curKey = cur.key, onAddSongs = onAddSongs)
                     }
                 }
                 if (showLyrics) {
-                    androidx.compose.material3.ModalBottomSheet(
-                        onDismissRequest = { showLyrics = false },
-                        containerColor = Color(0xFF1C1C1E).copy(alpha = 0.92f),
-                    ) {
-                        LyricsPanel(lyricsState = lyricsState, positionMs = state.positionMs)
+                    GlassSheet(artwork = cur.artwork, onDismiss = { showLyrics = false }) {
+                        LyricsPanel(
+                            lyricsState = lyricsState,
+                            positionMs = state.positionMs,
+                            title = cur.title,
+                            artist = cur.artist,
+                            onSeek = { player.seekTo(it) },
+                        )
                     }
                 }
             } else {
@@ -332,12 +350,6 @@ private fun QueuePanel(
     onAddSongs: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Box(
-            Modifier.width(36.dp).height(5.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color.White.copy(alpha = 0.35f))
-                .align(Alignment.CenterHorizontally),
-        )
         val cur = state.queue.find { it.key == curKey }
         if (cur != null) {
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -450,49 +462,124 @@ private fun fmtMs(ms: Long): String {
 }
 
 /**
- * Panel lirik. Sumber: LyricsRepository (LRCLIB via lrcmux). Kalau ada versi
- * synced (timestamp), baris yang lagi dinyanyiin di-highlight berdasarkan posisi lagu.
+ * Sheet kaca dipakai bareng Lirik & Antrian: artwork lagu di-blur jadi latar, ditutup scrim gelap
+ * (teks tetap terbaca), tepi atas diberi rim-light. Container asli ModalBottomSheet dibuat transparan.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun GlassSheet(artwork: String?, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Transparent,
+        dragHandle = null,
+        shape = shape,
+        scrimColor = Color.Black.copy(alpha = 0.55f),
+        tonalElevation = 0.dp,
+    ) {
+        Box(
+            Modifier.fillMaxWidth().clip(shape).background(Color(0xFF101012))
+                .border(1.dp, com.zaaam.liphify.ui.theme.GlassRim, shape),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Artwork(model = artwork, modifier = Modifier.fillMaxSize().blur(44.dp).graphicsLayer(alpha = 0.5f), radius = 0.dp)
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.30f), Color.Black.copy(alpha = 0.78f))),
+                    ),
+                )
+            }
+            Column(Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 6.dp)
+                        .size(width = 38.dp, height = 5.dp).clip(RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.4f)),
+                )
+                content()
+            }
+        }
+    }
+}
+
+/**
+ * Panel lirik. Sumber: LyricsRepository (LRCLIB via lrcmux). Versi synced: baris aktif membesar/terang
+ * dengan animasi, daftar auto-scroll mengikuti lagu, ketuk baris = loncat ke bagian itu.
  */
 @Composable
-private fun LyricsPanel(lyricsState: LyricsState, positionMs: Long) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Text("Lirik", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+private fun LyricsPanel(
+    lyricsState: LyricsState,
+    positionMs: Long,
+    title: String,
+    artist: String,
+    onSeek: (Long) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
+        Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(artist, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 10.dp))
         when (lyricsState) {
             is LyricsState.Idle, is LyricsState.Loading -> {
-                Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator()
+                Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator(color = Accent)
                 }
             }
             is LyricsState.NotFound -> {
-                Text(
-                    "Lirik untuk lagu ini belum ketemu.",
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(vertical = 24.dp),
-                )
+                Box(
+                    Modifier.fillMaxWidth().padding(vertical = 24.dp).glass(com.zaaam.liphify.ui.theme.GlassShapeLg).padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Lirik untuk lagu ini belum ketemu.", color = Color.White.copy(alpha = 0.7f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
             is LyricsState.Success -> {
                 val lyrics = lyricsState.lyrics
                 if (lyrics.hasSynced) {
                     val active = lyrics.synced.indexOfLast { it.timeMs <= positionMs }
-                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
-                        itemsIndexed(lyrics.synced) { i, line ->
-                            Text(
-                                line.text.ifBlank { "♪" },
-                                fontSize = if (i == active) 20.sp else 17.sp,
-                                fontWeight = if (i == active) FontWeight.Bold else FontWeight.Normal,
-                                color = if (i == active) Color.White else Color.White.copy(alpha = 0.45f),
-                                modifier = Modifier.padding(vertical = 6.dp),
-                            )
+                    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LaunchedEffect(active) {
+                        if (active >= 0) listState.animateScrollToItem(active, scrollOffset = -160)
+                    }
+                    Box(Modifier.fillMaxWidth().heightIn(min = 360.dp, max = 500.dp).appear(80)) {
+                        LazyColumn(state = listState, modifier = Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 40.dp)) {
+                            itemsIndexed(lyrics.synced) { i, line ->
+                                val dist = kotlin.math.abs(i - active)
+                                val alpha by androidx.compose.animation.core.animateFloatAsState(
+                                    if (i == active) 1f else if (dist == 1) 0.55f else 0.32f, androidx.compose.animation.core.tween(320), label = "lyAlpha",
+                                )
+                                val scale by androidx.compose.animation.core.animateFloatAsState(
+                                    if (i == active) 1f else 0.84f, androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow), label = "lyScale",
+                                )
+                                Text(
+                                    line.text.ifBlank { "♪" },
+                                    fontSize = 27.sp,
+                                    lineHeight = 33.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                            indication = null,
+                                        ) { onSeek(line.timeMs) }
+                                        .graphicsLayer {
+                                            this.alpha = alpha
+                                            scaleX = scale; scaleY = scale
+                                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                        }
+                                        .padding(vertical = 9.dp),
+                                )
+                            }
                         }
+                        // Pudar di tepi atas/bawah biar lirik "keluar-masuk" halus.
+                        Box(Modifier.fillMaxWidth().height(36.dp).align(Alignment.TopCenter).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))))
+                        Box(Modifier.fillMaxWidth().height(36.dp).align(Alignment.BottomCenter).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))))
                     }
                 } else {
-                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
-                        item {
-                            Text(lyrics.plain, fontSize = 17.sp, color = Color.White.copy(alpha = 0.85f))
-                        }
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(min = 300.dp, max = 500.dp).appear(80), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)) {
+                        item { Text(lyrics.plain, fontSize = 20.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.92f)) }
                     }
                 }
             }
         }
+        Spacer(Modifier.height(20.dp))
     }
 }

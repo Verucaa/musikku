@@ -1,7 +1,7 @@
 package com.zaaam.liphify.ui.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import com.zaaam.liphify.ui.theme.pressable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,9 +39,9 @@ val GENRES: List<Pair<String, Pair<Color, Color>>> = listOf(
 fun GenreTile(name: String, colors: Pair<Color, Color>, onClick: () -> Unit) {
     Box(
         Modifier.padding(6.dp).fillMaxWidth().height(110.dp)
+            .pressable(onClick)
             .clip(RoundedCornerShape(12.dp))
             .background(Brush.linearGradient(listOf(colors.first, colors.second)))
-            .clickable(onClick = onClick)
             .padding(12.dp),
         contentAlignment = Alignment.BottomStart,
     ) {

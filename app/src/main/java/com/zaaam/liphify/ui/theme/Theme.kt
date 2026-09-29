@@ -1,5 +1,6 @@
 package com.zaaam.liphify.ui.theme
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -54,6 +55,9 @@ private val Scheme = darkColorScheme(
 fun LiPhifyTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = Scheme, typography = AppTypography) {
         CompositionLocalProvider(
+            // Icon tanpa tint memakai LocalContentColor. Default-nya HITAM kalau tidak ada Surface/Scaffold
+            // yang mengisinya — jangan sampai bergantung pada warna container (Scaffold transparan => ikon hitam).
+            LocalContentColor provides TextPrimary,
             LocalTextStyle provides TextStyle(fontFamily = AppFont, color = TextPrimary),
         ) {
             content()

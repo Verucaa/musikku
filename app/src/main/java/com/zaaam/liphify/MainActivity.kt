@@ -104,6 +104,7 @@ fun LiPhifyScaffold(
     com.zaaam.liphify.ui.theme.AmbientBackground(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = com.zaaam.liphify.ui.theme.TextPrimary,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp)) {
@@ -276,6 +277,11 @@ private fun TabItem(
     modifier: Modifier = Modifier,
 ) {
     val selected = route?.substringBefore("?") == tab.route
+    val tint by androidx.compose.animation.animateColorAsState(
+        if (selected) Accent else TextSecondary,
+        androidx.compose.animation.core.tween(240),
+        label = "tabTint",
+    )
     IconButton(
         onClick = {
             nav.navigate(tab.route) {
@@ -290,12 +296,12 @@ private fun TabItem(
             Icon(
                 icon,
                 contentDescription = tab.label,
-                tint = if (selected) Accent else TextSecondary,
+                tint = tint,
             )
             Text(
                 tab.label,
                 fontSize = 10.sp,
-                color = if (selected) Accent else TextSecondary,
+                color = tint,
             )
         }
     }

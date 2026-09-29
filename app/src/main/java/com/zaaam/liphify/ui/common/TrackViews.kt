@@ -6,6 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.graphicsLayer
+import com.zaaam.liphify.ui.theme.pressable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,14 +66,23 @@ fun Artwork(
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(radius),
 ) {
     if (model != null) {
-        AsyncImage(
-            model = model,
-            contentDescription = null,
-            modifier = modifier.clip(shape),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-            error = painterResource(R.drawable.ic_music_note),
-            fallback = painterResource(R.drawable.ic_music_note),
-        )
+        // Thumbnail YouTube (sddefault/hqdefault) itu 4:3 dan bar hitam atas-bawahnya sudah "kepanggang"
+        // di gambar. Kalau terdeteksi 4:3, zoom ke area tengah supaya bar-nya kepotong (sisanya cuma cover).
+        var zoom by remember(model) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+        Box(modifier.clip(shape)) {
+            AsyncImage(
+                model = model,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = zoom; scaleY = zoom },
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                onSuccess = { st ->
+                    val sz = st.painter.intrinsicSize
+                    if (sz.width > 0f && sz.height > 0f) zoom = if (sz.width / sz.height in 1.25f..1.42f) 1.34f else 1f
+                },
+                error = painterResource(R.drawable.ic_music_note),
+                fallback = painterResource(R.drawable.ic_music_note),
+            )
+        }
     } else {
         Box(
             modifier
@@ -99,7 +111,7 @@ fun TrackRow(
     Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth()
-                .combinedClickable(onClick = onPlay, onLongClick = onMenu)
+                .pressable(onClick = onPlay, onLongClick = onMenu, pressedScale = 0.985f)
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

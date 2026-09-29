@@ -7,7 +7,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.graphicsLayer
+import com.zaaam.liphify.ui.theme.appear
 import com.zaaam.liphify.ui.theme.glass
+import com.zaaam.liphify.ui.theme.pressable
 import com.zaaam.liphify.ui.theme.GlassShapeLg
 import com.zaaam.liphify.ui.theme.GlassRim
 import com.zaaam.liphify.ui.theme.ArchShape
@@ -127,14 +129,17 @@ fun HomeScreen(
             item {
                 val last = s.recent.first()
                 Box(
-                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().glass(GlassShapeLg)
-                        .clickable { player.playTrack(last, s.recent) },
+                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().appear(0)
+                        .pressable({ player.playTrack(last, s.recent) }, pressedScale = 0.97f)
+                        .glass(GlassShapeLg),
                 ) {
-                    Artwork(
-                        model = last.artwork,
-                        modifier = Modifier.fillMaxSize().blur(28.dp).graphicsLayer(alpha = 0.35f),
-                        radius = 0.dp,
-                    )
+                    Box(Modifier.fillMaxSize()) {
+                        Artwork(
+                            model = last.artwork,
+                            modifier = Modifier.fillMaxSize().blur(28.dp).graphicsLayer(alpha = 0.35f),
+                            radius = 0.dp,
+                        )
+                    }
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Artwork(model = last.artwork, modifier = Modifier.size(92.dp), radius = 26.dp)
                         Column(Modifier.padding(start = 14.dp).weight(1f)) {
@@ -151,7 +156,7 @@ fun HomeScreen(
             }
         }
         item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().appear(90).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickChip("Favorit", Icons.Filled.Favorite, onOpenFavorit)
                 QuickChip("Jelajah", Icons.Filled.Explore, onOpenBrowse)
                 QuickChip("Cari", Icons.Filled.Search, onOpenSearch)
@@ -174,7 +179,7 @@ fun HomeScreen(
             }
             s.trending.isNotEmpty() -> {
                 item {
-                    LazyRow(Modifier.padding(vertical = 8.dp)) {
+                    LazyRow(Modifier.padding(vertical = 8.dp).appear(170)) {
                         itemsIndexed(s.trending, key = { _, t -> t.key }) { i, t ->
                             if (i == 0) FeatureCard(t) { player.playTrack(t, s.trending) }
                             else MediaCard(t, Modifier.padding(top = if (i % 2 == 0) 0.dp else 24.dp)) { player.playTrack(t, s.trending) }
@@ -187,7 +192,7 @@ fun HomeScreen(
                     LazyRow(Modifier.padding(vertical = 8.dp)) {
                         items(s.trending.distinctBy { it.artist }.take(8), key = { it.artist }) { t ->
                             Column(
-                                Modifier.padding(start = 16.dp).width(96.dp).clickable { onGenre(t.artist) },
+                                Modifier.padding(start = 16.dp).width(96.dp).pressable({ onGenre(t.artist) }),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Artwork(
@@ -276,7 +281,7 @@ private fun SectionTitle(text: String) {
 @Composable
 private fun QuickChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(
-        Modifier.glass(RoundedCornerShape(24.dp)).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.pressable(onClick).glass(RoundedCornerShape(24.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
@@ -296,7 +301,7 @@ private fun StatTile(label: String, value: String, modifier: Modifier = Modifier
 @Composable
 private fun FeatureCard(t: Track, onClick: () -> Unit) {
     val shape = RoundedCornerShape(30.dp)
-    Box(Modifier.padding(start = 16.dp).size(width = 280.dp, height = 190.dp).clip(shape).border(1.dp, GlassRim, shape).clickable(onClick = onClick)) {
+    Box(Modifier.padding(start = 16.dp).size(width = 280.dp, height = 190.dp).pressable(onClick).clip(shape).border(1.dp, GlassRim, shape)) {
         Artwork(model = t.artwork, modifier = Modifier.fillMaxSize(), shape = shape, fallbackIconSize = 56.dp)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
         Text("#1 TRENDING", Modifier.align(Alignment.TopStart).padding(14.dp).glass(RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -310,7 +315,7 @@ private fun FeatureCard(t: Track, onClick: () -> Unit) {
 @Composable
 private fun MediaCard(t: Track, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(26.dp)
-    Column(modifier.padding(start = 14.dp).width(148.dp).clickable(onClick = onClick)) {
+    Column(modifier.padding(start = 14.dp).width(148.dp).pressable(onClick)) {
         Artwork(model = t.artwork, modifier = Modifier.size(148.dp).border(1.dp, GlassRim, shape), shape = shape, fallbackIconSize = 48.dp)
         Text(t.title, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         Text(t.artist, fontSize = 12.sp, maxLines = 1, color = TextSecondary, overflow = TextOverflow.Ellipsis)
@@ -336,7 +341,7 @@ private fun ArtMosaic(tracks: List<Track>, onClick: (Track) -> Unit) {
 
 @Composable
 private fun MosaicTile(t: Track, modifier: Modifier, shape: androidx.compose.ui.graphics.Shape, onClick: (Track) -> Unit) {
-    Box(modifier.clip(shape).border(1.dp, GlassRim, shape).clickable { onClick(t) }) {
+    Box(modifier.pressable({ onClick(t) }).clip(shape).border(1.dp, GlassRim, shape)) {
         Artwork(model = t.artwork, modifier = Modifier.fillMaxSize(), shape = shape)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f))))
         Text(t.title, Modifier.align(Alignment.BottomStart).padding(12.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
