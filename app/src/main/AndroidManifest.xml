@@ -14,8 +14,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name=".LiPhifyApp"
-        android:label="LiPhify"
+        android:name=".VmusiX"
+        android:label="VmusiX"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.LiPhify"
         android:allowBackup="false">
@@ -30,7 +30,7 @@
         </activity>
         <!-- exported=true WAJIB untuk MediaSessionService (framework/system UI bind). -->
         <service
-            android:name=".playback.LiPhifySessionService"
+            android:name=".playback.VmusiXSessionService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true">
             <intent-filter>
