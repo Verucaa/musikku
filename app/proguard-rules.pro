@@ -2,6 +2,8 @@
 -keep class org.schabi.newpipe.extractor.timeago.patterns.** { *; }
 -keep class org.mozilla.javascript.** { *; }
 -keep class org.mozilla.classfile.ClassFileWriter
+-keep class com.zaaam.liphify.VmusiX { *; }
+-keep public class * extends android.app.Application
 -dontwarn org.mozilla.javascript.tools.**
 # Rhino (JS engine bawaan extractor) referensi API desktop yang tidak ada di Android
 -dontwarn java.beans.**
