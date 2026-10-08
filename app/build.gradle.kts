@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.zaaam.liphify"
+    namespace = "com.zaaam.VmusiX"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.zaaam.liphify"
+        applicationId = "com.zaaam.VmusiX"
         minSdk = 33
         targetSdk = 35
         versionCode = 1
